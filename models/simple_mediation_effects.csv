@@ -1,0 +1,13 @@
+Path,Direct_Effect,Indirect_Effect,Total_Effect,Proportion_Mediated
+traffic_seg → traffic_safety → V_img,0.0,0.09994059983908991,0.09994059983908991,1.0
+traffic_seg → social_safety → V_img,0.0,0.0,0.0,1.0
+traffic_seg → beauty → V_img,0.0,0.0,0.0,1.0
+traffic_seg → V_img (Total),-0.9370458495454737,0.09994059983908991,-0.8371052497063838,-0.11938833243985063
+social_seg → traffic_safety → V_img,0.0,-0.0,-0.0,1.0
+social_seg → social_safety → V_img,0.0,-0.3382952023762234,-0.3382952023762234,1.0
+social_seg → beauty → V_img,0.0,0.0,0.0,1.0
+social_seg → V_img (Total),-0.3238344191664512,-0.3382952023762234,-0.6621296215426746,0.5109199035500636
+beauty_seg → traffic_safety → V_img,0.0,-0.0,-0.0,1.0
+beauty_seg → social_safety → V_img,0.0,0.0,0.0,1.0
+beauty_seg → beauty → V_img,0.0,0.0798115139304394,0.0798115139304394,1.0
+beauty_seg → V_img (Total),0.5958781125107314,0.0798115139304394,0.6756896264411708,0.11811860180657699

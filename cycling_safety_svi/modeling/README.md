@@ -1,79 +1,88 @@
 # Structural Equation Modeling for Cycling Safety Analysis
 
-This directory contains scripts for implementing Structural Equation Models (SEM) to analyze the relationship between street features and cycling route utility.
+This module provides a comprehensive implementation of Structural Equation Models (SEM) for analyzing cycling safety and route preferences based on image segmentation data.
 
 ## Overview
 
-The SEM models in this project aim to:
+The SEM models in this project use a mediation framework to analyze how different features in street images (traffic features, social features, and beauty features) affect perceived safety and route preferences.
 
-1. Create latent constructs for traffic safety, social safety, and beauty from street segmentation data
-2. Use these constructs as mediators between segmentation features and cycling route utility (V_img)
-3. Analyze both direct and indirect effects of street features on cycling route preferences
+## Model Types
+
+We implement several SEM model variants:
+
+1. **Full Model**: Complex model with all paths and cross-paths between variables
+2. **Simple Model**: Simplified model with fewer cross-paths
+3. **Minimal Model**: Minimal model with essential paths and fewer indicators
+4. **Direct-Only Model**: Direct effects only (no mediation)
+5. **Mediation-Only Model**: Mediation effects only (no direct effects)
+6. **Direct-Mediated Model**: All segmentation variables directly affect perceptions
+
+## OOP Implementation
+
+The code uses an object-oriented architecture:
+
+- `SEMModel`: Base class for all SEM models
+- `ModelType`: Enum defining available model types
+- `SEMModelRegistry`: Registry for model types and implementation classes
+- Specialized model classes for each model type
 
 ## Files
 
-- `sem_model.py`: Implementation of a mediation-focused SEM model
-- `sem_advanced.py`: Advanced implementation with multiple mediation model specifications, exploratory data analysis, and comprehensive model comparison
+- `sem_classes.py`: Core OOP implementation with base classes and registry
+- `sem_models.py`: Implementations of different SEM model types
+- `sem_utils.py`: Utility functions for data preparation and model comparison
+- `run_sem.py`: Command-line interface for running models
 
-## Mediation Framework
+## Running the Analysis
 
-Our models use a mediation framework where:
-
-1. **Independent Variables (X)**: Segmentation features grouped into traffic-related, social-related, and aesthetics-related clusters
-2. **Mediators (M)**: Latent constructs for perceived traffic safety, social safety, and beauty
-3. **Dependent Variable (Y)**: Cycling route utility (V_img)
-
-This approach tests whether the effect of street features on route choice is mediated through perceptions of safety and beauty.
-
-## Theory
-
-Structural Equation Modeling (SEM) with mediation allows us to:
-
-- Test whether street features affect cycling route utility directly or indirectly through perceptions
-- Estimate the proportion of effects that are mediated
-- Compare competing mediation hypotheses (full vs. partial mediation)
-- Anchor the latent constructs to observed perception ratings
-
-In our models, the latent constructs are anchored to the observed perception ratings to ensure they reflect participants' subjective perceptions, while still being influenced by objective street features.
-
-## Usage
-
-### Basic Mediation Model
+You can run the complete SEM analysis using the provided script:
 
 ```bash
-python -m cycling_safety_svi.modeling.sem_model
+./run_sem_analysis.sh
 ```
 
-This runs a mediation model with default parameters and saves results to the models directory.
+This will:
+1. Organize existing model results
+2. Clean model comparison outputs
+3. Run all SEM models with improved organization
+4. Perform stepwise variable selection for different mediators
 
-### Advanced Mediation Analysis
+## Individual Commands
+
+You can also run individual analysis steps:
 
 ```bash
-python -m cycling_safety_svi.modeling.sem_advanced --explore --output-dir=./models/sem_results --figures-dir=./figures/sem_analysis
+# Run a single model
+python -m cycling_safety_svi.modeling.run_sem run-model --model-type minimal
+
+# Run all models and compare
+python -m cycling_safety_svi.modeling.run_sem run-all-models
+
+# Perform stepwise selection
+python -m cycling_safety_svi.modeling.run_sem stepwise-selection --target-mediator "traffic_safety"
+
+# Organize results
+python -m cycling_safety_svi.modeling.run_sem organize-results
+
+# Clean model comparison output
+python -m cycling_safety_svi.modeling.run_sem clean-model-comparison
 ```
 
-Parameters:
-- `--explore`: Run exploratory data analysis (default: True)
-- `--output-dir`: Directory to save model results (default: models/sem_models)
-- `--figures-dir`: Directory to save EDA figures (default: figures/sem_analysis)
+## Results
 
-## Model Specifications
+All results are stored in `reports/models/sem/` with the following organization:
 
-The advanced script tests multiple mediation model specifications:
+- Each model type has its own subdirectory
+- Model comparison results are in the root directory
+- Stepwise selection results are in the `stepwise/` subdirectory
 
-1. **Full Mediation**: Street features affect V_img only through perception mediators
-2. **Partial Mediation**: Street features affect V_img both directly and through perception mediators
-3. **Simplified Mediation**: Reduced model with fewer cross-paths and indicators
-4. **Direct Effects Only**: Baseline model with no mediation for comparison
-
-## Output Analysis
-
-The models produce:
-
-1. **Path Coefficients**: Direct relationships between variables
-2. **Mediation Effects**: Indirect effects through each mediator
-3. **Proportion Mediated**: Percentage of total effect that occurs through mediators
-4. **Model Comparisons**: Statistical comparisons of competing mediation models
+The key output files include:
+- `*_estimates.csv`: Model parameter estimates
+- `*_mediation_effects.csv`: Calculated mediation effects
+- `*_fit_indices.csv`: Model fit statistics
+- `*_plot.png`: Path diagram visualization
+- `model_comparison.csv`: Comparison of fit statistics across models
+- `model_comparison.png`: Visualization of model comparison
 
 ## Dependencies
 

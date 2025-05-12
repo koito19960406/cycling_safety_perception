@@ -1,0 +1,43 @@
+chi2,DoF,CFI,RMSEA,AIC,BIC,Model
+"Value    16528.019683
+Name: chi2, dtype: float64","Value    102
+Name: DoF, dtype: int64","Value    0.355779
+Name: CFI, dtype: float64","Value    0.206871
+Name: RMSEA, dtype: float64","Value    93.217843
+Name: AIC, dtype: float64","Value    411.112955
+Name: BIC, dtype: float64",full
+"Value    18543.681281
+Name: chi2, dtype: float64","Value    108
+Name: DoF, dtype: int64","Value    0.276961
+Name: CFI, dtype: float64","Value    0.212986
+Name: RMSEA, dtype: float64","Value    80.146822
+Name: AIC, dtype: float64","Value    360.642509
+Name: BIC, dtype: float64",simple
+"Value    1981.44122
+Name: chi2, dtype: float64","Value    27
+Name: DoF, dtype: int64","Value    0.712678
+Name: CFI, dtype: float64","Value    0.138695
+Name: RMSEA, dtype: float64","Value    54.947162
+Name: AIC, dtype: float64","Value    229.477812
+Name: BIC, dtype: float64",minimal
+"Value    16000.282422
+Name: chi2, dtype: float64","Value    72
+Name: DoF, dtype: int64","Value    0.291481
+Name: CFI, dtype: float64","Value    0.242466
+Name: RMSEA, dtype: float64","Value    57.498256
+Name: AIC, dtype: float64","Value    263.195093
+Name: BIC, dtype: float64",direct_only
+"Value    18556.219173
+Name: chi2, dtype: float64","Value    111
+Name: DoF, dtype: int64","Value    0.276586
+Name: CFI, dtype: float64","Value    0.210142
+Name: RMSEA, dtype: float64","Value    74.14016
+Name: AIC, dtype: float64","Value    335.936135
+Name: BIC, dtype: float64",mediation_only
+"Value    0.146231
+Name: chi2, dtype: float64","Value    91
+Name: DoF, dtype: int64","Value    1.003565
+Name: CFI, dtype: float64","Value    0
+Name: RMSEA, dtype: int64","Value    123.999922
+Name: AIC, dtype: float64","Value    510.460647
+Name: BIC, dtype: float64",direct_mediated
