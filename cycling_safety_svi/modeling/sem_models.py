@@ -370,3 +370,64 @@ class DirectMediatedSEMModel(SEMModel):
         effects_df = pd.DataFrame(effects)
         
         return effects_df 
+
+
+@SEMModelRegistry.register(ModelType.BENCHMARK)
+class BenchmarkSEMModel(SEMModel):
+    """Benchmark model with direct effects only (no SEM structure).
+    
+    This model treats all segmentation variables and perception variables as 
+    independent predictors of utility (V_img), without any latent variable structure.
+    It serves as a useful baseline to compare against the more complex SEM models.
+    """
+    
+    def get_model_spec(self) -> str:
+        """Get the benchmark model specification."""
+        return """
+        # Direct effects of all variables on V_img 
+        # Dropping 'water' to avoid perfect multicollinearity
+        V_img ~ road + car_pixels + bicycle_pixels + truck_pixels + traffic_sign_pixels + person_pixels + building + sidewalk + trees + grass + sky + plants + traffic_safety_rating + social_safety_rating + beauty_rating
+        
+        # Allow correlations between perception ratings
+        traffic_safety_rating ~~ social_safety_rating
+        traffic_safety_rating ~~ beauty_rating
+        social_safety_rating ~~ beauty_rating
+        """
+    
+    def calculate_indirect_effects(self) -> pd.DataFrame:
+        """Calculate direct effects for the benchmark model."""
+        logger.info("Calculating direct effects for benchmark model...")
+        
+        # Extract paths from standardized estimates
+        paths = self.std_estimates.copy()
+        
+        # Initialize effects dictionary
+        effects = {
+            'Path': [],
+            'Direct_Effect': [],
+            'Indirect_Effect': [],
+            'Total_Effect': [],
+            'Proportion_Mediated': []
+        }
+        
+        # For benchmark model, there are only direct effects
+        seg_vars = ['road', 'car_pixels', 'bicycle_pixels', 'truck_pixels', 'traffic_sign_pixels',
+                   'person_pixels', 'building', 'sidewalk', 'trees', 'grass', 'sky', 'plants',
+                   'traffic_safety_rating', 'social_safety_rating', 'beauty_rating']
+        
+        for var in seg_vars:
+            # Get direct effect on V_img
+            direct_effect_rows = paths[(paths['lval'] == 'V_img') & (paths['rval'] == var)]
+            direct_effect = direct_effect_rows['Estimate'].values[0] if not direct_effect_rows.empty else 0
+            
+            # Add direct effect for this variable
+            effects['Path'].append(f"{var} → V_img")
+            effects['Direct_Effect'].append(direct_effect)
+            effects['Indirect_Effect'].append(0)  # No indirect effects
+            effects['Total_Effect'].append(direct_effect)
+            effects['Proportion_Mediated'].append(0.0)  # 0% mediated
+        
+        # Convert to DataFrame
+        effects_df = pd.DataFrame(effects)
+        
+        return effects_df 

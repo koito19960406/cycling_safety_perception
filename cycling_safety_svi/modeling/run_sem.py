@@ -15,7 +15,7 @@ import seaborn as sns
 
 from cycling_safety_svi.config import MODELS_DIR, PROCESSED_DATA_DIR, RAW_DATA_DIR
 from cycling_safety_svi.modeling.sem_classes import SEMModel, ModelType, SEMModelRegistry
-from cycling_safety_svi.modeling.sem_utils import prepare_data, compare_models, stepwise_model_selection
+from cycling_safety_svi.modeling.sem_utils import prepare_data, compare_models, stepwise_model_selection, cross_validate_models
 # Import model implementations to register them with the registry
 from cycling_safety_svi.modeling.sem_models import *
 
@@ -25,7 +25,9 @@ app = typer.Typer()
 def main_function(
     run_all: bool = True,
     specific_model: Optional[str] = None,
-    output_dir: Path = Path("reports/models/sem")
+    output_dir: Path = Path("reports/models/sem"),
+    run_cross_validation: bool = True,
+    cv_folds: int = 5
 ):
     """
     Run SEM analysis without using the CLI interface.
@@ -34,6 +36,8 @@ def main_function(
         run_all: Whether to run all models
         specific_model: Specific model to run (if run_all is False)
         output_dir: Output directory for results
+        run_cross_validation: Whether to run cross-validation
+        cv_folds: Number of folds for cross-validation
     """
     logger.info("Starting SEM analysis...")
     
@@ -65,6 +69,30 @@ def main_function(
         comparison = compare_models(fitted_models, output_dir=output_dir)
         print("\nModel Comparison:")
         print(comparison)
+        
+        # Run cross-validation if requested
+        if run_cross_validation:
+            logger.info("Running cross-validation...")
+            cv_output_dir = output_dir / "cross_validation"
+            os.makedirs(cv_output_dir, exist_ok=True)
+            
+            # Create dictionary mapping model types to model classes
+            model_classes = {model_type: SEMModelRegistry._models[model_type] 
+                            for model_type in ModelType 
+                            if model_type in SEMModelRegistry._models}
+            
+            # Run cross-validation
+            cv_results = cross_validate_models(
+                models_to_test=model_classes,
+                data=data,
+                n_splits=cv_folds,
+                output_dir=cv_output_dir
+            )
+            
+            # Print a simple summary
+            summary = cv_results[cv_results['Fold'] == 'Overall'].set_index('Model')[['R2', 'MSE', 'RMSE']]
+            print("\nCross-Validation Summary (Overall Performance):")
+            print(summary)
     else:
         # Run specific model
         try:
@@ -77,6 +105,28 @@ def main_function(
             model.save_results()
             
             logger.info(f"Successfully ran {model_type.value} model")
+            
+            # Run cross-validation for this model if requested
+            if run_cross_validation:
+                logger.info(f"Running cross-validation for {model_type.value} model...")
+                cv_output_dir = model_dir / "cross_validation"
+                os.makedirs(cv_output_dir, exist_ok=True)
+                
+                # Create dictionary with just this model
+                model_classes = {model_type: SEMModelRegistry._models[model_type]}
+                
+                # Run cross-validation
+                cv_results = cross_validate_models(
+                    models_to_test=model_classes,
+                    data=data,
+                    n_splits=cv_folds,
+                    output_dir=cv_output_dir
+                )
+                
+                # Print a simple summary
+                summary = cv_results[cv_results['Fold'] == 'Overall'].set_index('Model')[['R2', 'MSE', 'RMSE']]
+                print("\nCross-Validation Summary:")
+                print(summary)
         except Exception as e:
             logger.error(f"Error running model: {e}")
     
@@ -470,6 +520,74 @@ def clean_model_comparison(
         return None
 
 
+@app.command()
+def cross_validate(
+    output_dir: Optional[Path] = Path("reports/models/sem/cross_validation"),
+    n_splits: int = 5,
+    include_models: Optional[List[str]] = None,
+    exclude_models: Optional[List[str]] = None,
+    random_state: int = 42
+):
+    """
+    Run cross-validation for SEM models to evaluate predictive performance.
+    
+    Args:
+        output_dir: Directory for saving cross-validation results
+        n_splits: Number of folds for cross-validation
+        include_models: List of model types to include (None for all)
+        exclude_models: List of model types to exclude
+        random_state: Random seed for reproducibility
+    """
+    logger.info(f"Starting {n_splits}-fold cross-validation for SEM models")
+    
+    # Determine which models to run
+    if include_models is None:
+        models_to_test = list(ModelType)
+    else:
+        models_to_test = [ModelType(m.lower()) for m in include_models 
+                          if m.lower() in [mt.value for mt in ModelType]]
+    
+    if exclude_models:
+        exclude_enums = [ModelType(m.lower()) for m in exclude_models 
+                         if m.lower() in [mt.value for mt in ModelType]]
+        models_to_test = [m for m in models_to_test if m not in exclude_enums]
+    
+    # Create dictionary mapping model types to model classes
+    model_classes = {model_type: SEMModelRegistry._models[model_type] 
+                     for model_type in models_to_test 
+                     if model_type in SEMModelRegistry._models}
+    
+    # Ensure output directory exists
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Prepare data
+    data = prepare_data()
+    logger.info(f"Prepared data with {len(data)} observations for cross-validation")
+    
+    # Run cross-validation
+    cv_results = cross_validate_models(
+        models_to_test=model_classes,
+        data=data,
+        n_splits=n_splits,
+        output_dir=output_dir,
+        random_state=random_state
+    )
+    
+    logger.info("Cross-validation completed")
+    
+    # Print a simple summary
+    summary = cv_results[cv_results['Fold'] == 'Overall'].set_index('Model')[['R2', 'MSE', 'RMSE']]
+    print("\nCross-Validation Summary (Overall Performance):")
+    print(summary)
+    
+    return cv_results
+
+
 if __name__ == "__main__":
     # Use the direct function instead of Typer app
-    main_function(run_all=True) 
+    main_function(
+        run_all=True,
+        run_cross_validation=True,
+        cv_folds=5,
+        output_dir=Path("reports/models/sem")
+    ) 

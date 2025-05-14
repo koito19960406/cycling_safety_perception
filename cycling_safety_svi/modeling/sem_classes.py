@@ -24,6 +24,7 @@ class ModelType(str, Enum):
     DIRECT_ONLY = "direct_only"      # Direct effects only (no mediation)
     MEDIATION_ONLY = "mediation_only"  # Mediation effects only (no direct effects)
     DIRECT_MEDIATED = "direct_mediated"  # All segmentation variables directly affect perceptions
+    BENCHMARK = "benchmark"          # Simple benchmark model with direct effects only (no SEM structure)
 
 
 class SEMModel:

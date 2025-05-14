@@ -22,6 +22,7 @@ class ModelType(str, Enum):
     DIRECT_ONLY = "direct_only"      # Direct effects only (no mediation)
     MEDIATION_ONLY = "mediation_only"  # Mediation effects only (no direct effects)
     DIRECT_MEDIATED = "direct_mediated"  # All segmentation variables directly affect perceptions
+    BENCHMARK = "benchmark"          # Simple benchmark model with direct effects only (no SEM structure)
 
 def prepare_data():
     """
@@ -266,6 +267,22 @@ def get_model_spec(model_type: ModelType = ModelType.FULL):
         social_safety_rating ~~ beauty_rating
         """
     
+    elif model_type == ModelType.BENCHMARK:
+        # Benchmark model - simple direct effects model without SEM structure
+        # All segmentation variables and perception ratings directly predict utility
+        return """
+        # Direct effects of all variables on V_img 
+        # Dropping 'water' to avoid perfect multicollinearity
+        V_img ~ road + car_pixels + bicycle_pixels + truck_pixels + traffic_sign_pixels + 
+                person_pixels + building + sidewalk + trees + grass + sky + plants + 
+                traffic_safety_rating + social_safety_rating + beauty_rating
+        
+        # Allow correlations between perception ratings
+        traffic_safety_rating ~~ social_safety_rating
+        traffic_safety_rating ~~ beauty_rating
+        social_safety_rating ~~ beauty_rating
+        """
+    
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -345,6 +362,23 @@ def calculate_indirect_effects(model, std_estimates, model_type: ModelType = Mod
             effects['Indirect_Effect'].append(total_indirect)
             effects['Total_Effect'].append(total_effect)
             effects['Proportion_Mediated'].append(prop_mediated)
+    elif model_type == ModelType.BENCHMARK:
+        # For benchmark model, there are only direct effects
+        seg_vars = ['road', 'car_pixels', 'bicycle_pixels', 'truck_pixels', 'traffic_sign_pixels',
+                   'person_pixels', 'building', 'sidewalk', 'trees', 'grass', 'sky', 'plants',
+                   'traffic_safety_rating', 'social_safety_rating', 'beauty_rating']
+        
+        for var in seg_vars:
+            # Get direct effect on V_img
+            direct_effect_rows = paths[(paths['lval'] == 'V_img') & (paths['rval'] == var)]
+            direct_effect = direct_effect_rows['Estimate'].values[0] if not direct_effect_rows.empty else 0
+            
+            # Add direct effect for this variable
+            effects['Path'].append(f"{var} → V_img")
+            effects['Direct_Effect'].append(direct_effect)
+            effects['Indirect_Effect'].append(0)  # No indirect effects
+            effects['Total_Effect'].append(direct_effect)
+            effects['Proportion_Mediated'].append(0.0)  # 0% mediated
     else:
         # For standard latent variable models
         for seg in ['traffic_seg', 'social_seg', 'beauty_seg']:
@@ -436,10 +470,15 @@ def fit_model(df, model_type: ModelType, output_path: Path, plot_path: Path, eff
         logger.info(f"Saved standardized estimates to {model_output_path}")
         
         # Calculate and save mediation effects (if model has mediation)
-        if model_type != ModelType.DIRECT_ONLY:
+        if model_type not in [ModelType.DIRECT_ONLY, ModelType.BENCHMARK]:
             effects_df = calculate_indirect_effects(model, std_estimates, model_type)
             effects_df.to_csv(model_effects_path, index=False)
             logger.info(f"Saved mediation effects to {model_effects_path}")
+        elif model_type == ModelType.BENCHMARK:
+            # For benchmark model, calculate direct effects only
+            effects_df = calculate_indirect_effects(model, std_estimates, model_type)
+            effects_df.to_csv(model_effects_path, index=False)
+            logger.info(f"Saved direct effects to {model_effects_path}")
         else:
             effects_df = None
             logger.info("Skipping mediation effects calculation for direct-only model")
