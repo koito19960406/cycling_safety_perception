@@ -1,0 +1,60 @@
+# Configuration optimized for 3-category perception model with best hyperparameters from previous run
+
+# Dataset configuration
+dataset:
+  num_categories: 3  # Using low, medium, high categories
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  seed: 42
+  mixup_alpha: 0.2  # Mixup augmentation alpha parameter (0 = disabled)
+  cutmix_alpha: 0.2  # CutMix augmentation alpha parameter (0 = disabled)
+
+# Paths configuration
+paths:
+  # These will be auto-filled based on the system, but can be overridden
+  data_file: null  # Path to perception ratings CSV
+  img_path: null   # Path to image directory
+  output_dir: null # Directory to save results
+
+# Training parameters based on previous best results
+training:
+  batch_size: 16
+  learning_rate: 0.00015391446222995218  # From best params
+  weight_decay: 0.04  # Increased from 0.026 to provide more regularization
+  patience: 10  # Increased patience to give more time for convergence
+  workers: 2
+  num_epochs: 80  # Increased max epochs to allow for longer training
+  warmup_epochs: 15  # Increased from 10 for better initialization
+  warmup_type: "cosine"  # Changed from "linear" to "cosine" for smoother transition
+  warmup_initial_factor: 0.05  # Reduced from 0.1 to start with smaller learning rate
+  lr_decay_factor: 0.07420914937766805  # From best params
+  scheduler_factor: 0.4566395992413277  # From best params
+  scheduler_patience: 4                  # From best params
+  grad_clip_value: 1.47078459448269     # From best params
+  mixed_precision: true                  # Enable mixed precision training for faster computation
+  label_smoothing: 0.1                   # Add label smoothing to prevent overconfidence
+  
+# Model architecture - using best parameters from previous run with adjusted dropout
+model:
+  hidden_layers: 3                      # From best params
+  hidden_dims: [192, 192, 128]          # From best params
+  dropout_rates: [0.65, 0.6, 0.55]      # Increased dropout rates for more regularization
+  freeze_backbone: false                # From best params
+  backbone_dropout: 0.2                 # Add dropout to backbone features
+  stochastic_depth_rate: 0.1            # Add stochastic depth rate for additional regularization
+  
+# Hyperparameter optimization
+optuna:
+  use_optuna: false  # Set to false to use the best parameters directly
+  n_trials: 20
+  trial_epochs: 10
+  final_epochs: 50  # Reduced to prevent overfitting
+
+# Logging and output
+output:
+  log_every_n_epochs: 1
+  use_wandb: true
+  wandb_project: "cycling-perception"
+  wandb_entity: "koichi19960406"  # Set to your wandb username/entity
+  wandb_tags: ["3-category", "perception-model", "augmented-v2"]  # Updated tag for this enhanced version 

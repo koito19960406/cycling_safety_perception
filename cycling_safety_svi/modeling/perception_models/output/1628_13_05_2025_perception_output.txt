@@ -1,0 +1,10 @@
+PERCEPTION MODEL TRAINING STARTED at: 1628_13_05_2025
+Using device: cuda
+Loading data from /home/kiito/cycling_safety_svi/data/raw/perceptionratings.csv
+Dataset loaded: 2126 training samples, 531 test samples
+Starting Optuna hyperparameter optimization
+Starting perception model training
+1629_13_05_2025	Epoch 001  Train Loss | Test Loss | Best Test Loss	0.247 | 0.243 | 0.243 
+1631_13_05_2025	Epoch 002  Train Loss | Test Loss | Best Test Loss	0.229 | 0.242 | 0.242 
+1633_13_05_2025	Epoch 003  Train Loss | Test Loss | Best Test Loss	0.209 | 0.250 | 0.242 +
+1635_13_05_2025	Epoch 004  Train Loss | Test Loss | Best Test Loss	0.170 | 0.271 | 0.242 ++

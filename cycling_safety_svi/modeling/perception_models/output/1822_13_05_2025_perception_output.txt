@@ -1,0 +1,24 @@
+PERCEPTION MODEL TRAINING STARTED at: 1822_13_05_2025
+Using device: cuda
+Loading data from /home/kiito/cycling_safety_svi/data/raw/perceptionratings.csv
+Dataset loaded: 2634 training samples, 566 test samples
+Class weights calculated for balancing:
+  traffic_safety: [3.149231195449829, 0.6203031539916992, 0.3332971930503845, 0.2332763969898224, 0.6638919711112976]
+  social_safety: [3.097482442855835, 0.5663967728614807, 0.21202018857002258, 0.18457995355129242, 0.9395207166671753]
+  beautiful: [1.531772255897522, 0.6603750586509705, 0.48679980635643005, 0.6018484830856323, 1.719204306602478]
+Starting Optuna hyperparameter optimization
+Trial 0: Testing hyperparameters:
+  Learning rate: 8.656808492712423e-05
+  Weight decay: 0.0278242347315888
+  LR decay factor: 0.2782946430482371
+  Scheduler factor: 0.7742404890094554
+  Scheduler patience: 3
+  Gradient clip value: 0.6575779349665285
+  Hidden layers: 1
+  Hidden dimensions: [320]
+  Dropout rates: [0.5346139268472843]
+  Use cross-attention: True
+  Cross-attention heads: 1
+  Freeze backbone: True
+Warmup training for 2 epochs
+Starting perception model training

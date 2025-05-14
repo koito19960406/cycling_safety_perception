@@ -1,0 +1,16 @@
+PERCEPTION MODEL TRAINING STARTED at: 1657_13_05_2025
+Using device: cuda
+Loading data from /home/kiito/cycling_safety_svi/data/raw/perceptionratings.csv
+Dataset loaded: 2126 training samples, 531 test samples
+Starting Optuna hyperparameter optimization
+Trial 0: Testing hyperparameters:
+  Learning rate: 0.0007956697784302634
+  Weight decay: 0.0013037283314640015
+  LR decay factor: 0.2485523894584115
+  Scheduler factor: 0.12256257873504982
+  Scheduler patience: 2
+  Hidden layers: 2
+  Hidden dimensions: [512, 512]
+  Dropout rates: [0.4534318673243324, 0.32393288039456636]
+Warmup training for 2 epochs
+Starting perception model training

@@ -1,0 +1,29 @@
+PERCEPTION MODEL TRAINING STARTED at: 1826_13_05_2025
+Using device: cuda
+Loading data from /home/kiito/cycling_safety_svi/data/raw/perceptionratings.csv
+Dataset loaded: 2634 training samples, 566 test samples
+Class weights calculated for balancing:
+  traffic_safety: [3.149231195449829, 0.6203031539916992, 0.3332971930503845, 0.2332763969898224, 0.6638919711112976]
+  social_safety: [3.097482442855835, 0.5663967728614807, 0.21202018857002258, 0.18457995355129242, 0.9395207166671753]
+  beautiful: [1.531772255897522, 0.6603750586509705, 0.48679980635643005, 0.6018484830856323, 1.719204306602478]
+Starting Optuna hyperparameter optimization
+Trial 0: Testing hyperparameters:
+  Learning rate: 2.106374454902944e-05
+  Weight decay: 0.05691571232923009
+  LR decay factor: 0.12845199964475842
+  Scheduler factor: 0.43268153434606504
+  Scheduler patience: 2
+  Gradient clip value: 2.83079707856159
+  Hidden layers: 1
+  Hidden dimensions: [256]
+  Dropout rates: [0.4421694459023108]
+  Use cross-attention: True
+  Cross-attention heads: 4
+  Freeze backbone: False
+Warmup training for 2 epochs
+Starting perception model training
+1828_13_05_2025	Epoch 001  Train Loss | Val Loss | Best Val Loss	0.311 | 0.294 | 0.294 
+1830_13_05_2025	Epoch 002  Train Loss | Val Loss | Best Val Loss	0.292 | 0.282 | 0.282 
+Trial training for 10 epochs
+Starting perception model training
+1832_13_05_2025	Epoch 001  Train Loss | Val Loss | Best Val Loss	0.283 | 0.277 | 0.277 

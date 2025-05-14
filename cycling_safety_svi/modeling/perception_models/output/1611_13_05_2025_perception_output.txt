@@ -1,0 +1,11 @@
+PERCEPTION MODEL TRAINING STARTED at: 1611_13_05_2025
+Using device: cuda
+Loading data from /home/kiito/cycling_safety_svi/data/raw/perceptionratings.csv
+Dataset loaded: 2126 training samples, 531 test samples
+Starting Optuna hyperparameter optimization
+PERCEPTION MODEL TRAINING STARTED at: 1611_13_05_2025
+Using device: cuda
+Loading data from /home/kiito/cycling_safety_svi/data/raw/perceptionratings.csv
+Dataset loaded: 2126 training samples, 531 test samples
+Starting Optuna hyperparameter optimization
+Starting perception model training

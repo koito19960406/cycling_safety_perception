@@ -1,0 +1,3 @@
+PERCEPTION MODEL TRAINING STARTED at: 1610_13_05_2025
+Using device: cuda
+Loading data from /home/kiito/cycling_safety_svi/data/raw/perceptionratings.csv

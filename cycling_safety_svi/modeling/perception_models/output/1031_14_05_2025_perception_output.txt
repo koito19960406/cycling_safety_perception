@@ -1,0 +1,22 @@
+PERCEPTION MODEL TRAINING STARTED at: 1031_14_05_2025
+Number of categories: 3 (using 3 (low, medium, high) classes)
+Using device: cuda
+Loading data from /home/kiito/cycling_safety_svi/data/raw/perceptionratings.csv
+Dataset loaded: 2634 training samples, 564 validation samples, 566 test samples
+Class weights calculated for balancing:
+  traffic_safety: [1.5180288553237915, 0.9763171076774597, 0.5056540369987488]
+  social_safety: [1.6997554302215576, 0.7526190280914307, 0.5476254820823669]
+  beautiful: [0.993035078048706, 1.0476105213165283, 0.9593544602394104]
+Final training with hyperparameters:
+  learning_rate: 0.00015391446222995218
+  weight_decay: 0.026453257276556567
+  lr_decay_factor: 0.07420914937766805
+  scheduler_factor: 0.4566395992413277
+  scheduler_patience: 4
+  hidden_layers: 3
+  hidden_dims: [192, 192, 128]
+  dropout_rates: [0.5807705634994895, 0.48930329413821383, 0.5355068200013525]
+  freeze_backbone: False
+  grad_clip_value: 1.47078459448269
+Performing warmup training for 10 epochs
+Starting perception model training

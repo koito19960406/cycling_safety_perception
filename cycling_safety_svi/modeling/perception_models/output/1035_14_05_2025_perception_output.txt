@@ -1,0 +1,85 @@
+PERCEPTION MODEL TRAINING STARTED at: 1035_14_05_2025
+Number of categories: 3 (using 3 (low, medium, high) classes)
+Using device: cuda
+Loading data from /home/kiito/cycling_safety_svi/data/raw/perceptionratings.csv
+Dataset loaded: 2634 training samples, 564 validation samples, 566 test samples
+Class weights calculated for balancing:
+  traffic_safety: [1.5180288553237915, 0.9763171076774597, 0.5056540369987488]
+  social_safety: [1.6997554302215576, 0.7526190280914307, 0.5476254820823669]
+  beautiful: [0.993035078048706, 1.0476105213165283, 0.9593544602394104]
+Final training with hyperparameters:
+  learning_rate: 0.00015391446222995218
+  weight_decay: 0.026453257276556567
+  lr_decay_factor: 0.07420914937766805
+  scheduler_factor: 0.4566395992413277
+  scheduler_patience: 4
+  hidden_layers: 3
+  hidden_dims: [192, 192, 128]
+  dropout_rates: [0.5807705634994895, 0.48930329413821383, 0.5355068200013525]
+  freeze_backbone: False
+  grad_clip_value: 1.47078459448269
+Performing warmup training for 10 epochs using linear scheduler
+Warmup Epoch 1/10, LR: 0.000029, Factor: 0.1000
+Warmup Epoch 1/10, Loss: 3.5857
+Warmup Epoch 2/10, LR: 0.000043, Factor: 0.2000
+Warmup Epoch 2/10, Loss: 3.4764
+Warmup Epoch 3/10, LR: 0.000057, Factor: 0.3000
+Warmup Epoch 3/10, Loss: 3.4306
+Warmup Epoch 4/10, LR: 0.000071, Factor: 0.4000
+Warmup Epoch 4/10, Loss: 3.3154
+Warmup Epoch 5/10, LR: 0.000085, Factor: 0.5000
+Warmup Epoch 5/10, Loss: 3.2659
+Warmup Epoch 6/10, LR: 0.000099, Factor: 0.6000
+Warmup Epoch 6/10, Loss: 3.2248
+Warmup Epoch 7/10, LR: 0.000112, Factor: 0.7000
+Warmup Epoch 7/10, Loss: 3.2114
+Warmup Epoch 8/10, LR: 0.000126, Factor: 0.8000
+Warmup Epoch 8/10, Loss: 3.1946
+Warmup Epoch 9/10, LR: 0.000140, Factor: 0.9000
+Warmup Epoch 9/10, Loss: 3.1676
+Warmup Epoch 10/10, LR: 0.000154, Factor: 1.0000
+Warmup Epoch 10/10, Loss: 3.1660
+Warmup completed with linear schedule
+Learning rate progression: 0.000029 → 0.000154
+Starting main training
+Final training for up to 50 epochs with early stopping (patience=7)
+Starting perception model training
+1059_14_05_2025	Epoch 001  Train Loss | Val Loss | Best Val Loss	0.195 | 0.191 | 0.191 
+1101_14_05_2025	Epoch 002  Train Loss | Val Loss | Best Val Loss	0.192 | 0.191 | 0.191 
+1104_14_05_2025	Epoch 003  Train Loss | Val Loss | Best Val Loss	0.191 | 0.190 | 0.190 
+1106_14_05_2025	Epoch 004  Train Loss | Val Loss | Best Val Loss	0.189 | 0.189 | 0.189 
+1108_14_05_2025	Epoch 005  Train Loss | Val Loss | Best Val Loss	0.188 | 0.189 | 0.189 
+1111_14_05_2025	Epoch 006  Train Loss | Val Loss | Best Val Loss	0.185 | 0.189 | 0.189 +
+1113_14_05_2025	Epoch 007  Train Loss | Val Loss | Best Val Loss	0.184 | 0.189 | 0.189 ++
+1115_14_05_2025	Epoch 008  Train Loss | Val Loss | Best Val Loss	0.182 | 0.191 | 0.189 +++
+1118_14_05_2025	Epoch 009  Train Loss | Val Loss | Best Val Loss	0.179 | 0.191 | 0.189 ++++
+1120_14_05_2025	Epoch 010  Train Loss | Val Loss | Best Val Loss	0.179 | 0.194 | 0.189 +++++
+1122_14_05_2025	Epoch 011  Train Loss | Val Loss | Best Val Loss	0.174 | 0.191 | 0.189 ++++++
+1125_14_05_2025	Epoch 012  Train Loss | Val Loss | Best Val Loss	0.174 | 0.195 | 0.189 +++++++
+Early stopping at epoch 12
+Loss history saved to /home/kiito/cycling_safety_svi/cycling_safety_svi/modeling/perception_models/output/1035_14_05_2025_loss_history.csv
+
+Evaluation metrics:
+traffic_safety_acc: 0.4859
+social_safety_acc: 0.4417
+beautiful_acc: 0.5177
+overall_acc: 0.4817
+
+Per-class metrics for traffic_safety:
+Class      Precision  Recall     F1 Score  
+low        0.3547     0.5259     0.4236
+medium     0.2791     0.3200     0.2981
+high       0.7477     0.5533     0.6360
+
+Per-class metrics for social_safety:
+Class      Precision  Recall     F1 Score  
+low        0.3611     0.1566     0.2185
+medium     0.3817     0.7177     0.4983
+high       0.6350     0.3175     0.4234
+
+Per-class metrics for beautiful:
+Class      Precision  Recall     F1 Score  
+low        0.5032     0.7745     0.6100
+medium     0.4156     0.3678     0.3902
+high       0.7245     0.3777     0.4965
+Saved model to /home/kiito/cycling_safety_svi/cycling_safety_svi/modeling/perception_models/output/1035_14_05_2025_PerceptionModel_acc0.4817.pt
