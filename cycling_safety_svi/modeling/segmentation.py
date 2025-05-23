@@ -36,13 +36,15 @@ DEFAULT_SUMMARY_DIR = "data/processed/segmentation_results"
 segmenter = Segmenter(
     dataset='mapillary',
     task='semantic',
-    device='cuda'
+    device='cuda',
+    verbosity=2,
 )
 
 segmenter.segment(
     dir_input=DEFAULT_INPUT_DIR,
     dir_summary_output=DEFAULT_SUMMARY_DIR,
-    batch_size=64,
+    batch_size=16,
     save_format='csv',
-    csv_format='wide'
+    csv_format='wide',
+    max_workers=1,
 )
