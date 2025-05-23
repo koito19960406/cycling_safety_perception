@@ -1,3 +1,6 @@
 [submodule "reports"]
 	path = reports
 	url = git@github.com:koito19960406/cycling_safety_perception_report.git
+[submodule "cycling_safety_svi/cycling_safety_subjective_learning_pairwise"]
+	path = cycling_safety_svi/cycling_safety_subjective_learning_pairwise
+	url = https://github.com/mncosta/cycling_safety_subjective_learning_pairwise.git
