@@ -1,0 +1,58 @@
+# Configuration for ConvNextV2 feature extraction model
+
+# Dataset configuration
+dataset:
+  num_categories: 3  # Using low, medium, high categories
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  seed: 42
+  mixup_alpha: 0.2  # Mixup augmentation alpha parameter
+  cutmix_alpha: 0.2  # CutMix augmentation alpha parameter
+
+# Paths configuration
+paths:
+  # These MUST be overridden by command line arguments in the run script
+  data_file: "/home/kiito/cycling_safety_svi/data/raw/perceptionratings.csv"  # Path to perception ratings CSV - will be replaced by run script
+  img_path: "/srv/shared/bicycle_project_roos/images_scaled"    # Path to image directory - will be replaced by run script
+  output_dir: "/home/kiito/cycling_safety_svi/cycling_safety_svi/modeling/perception_models/output/convnextv2_model_20250514_165507" # Directory to save results - will be replaced by run script
+
+# Training parameters
+training:
+  batch_size: 8  # Reduced from 16 to prevent CUDA out of memory errors
+  learning_rate: 0.0001  # Adjusted for feature extraction
+  weight_decay: 0.03
+  patience: 10
+  workers: 1
+  num_epochs: 30
+  warmup_epochs: 5
+  warmup_type: "cosine"
+  warmup_initial_factor: 0.1
+  lr_decay_factor: 0.1
+  scheduler_factor: 0.5
+  scheduler_patience: 4
+  grad_clip_value: 1.5
+  mixed_precision: true  # Enable mixed precision training for memory efficiency
+  label_smoothing: 0.1   # Add label smoothing
+
+# Model architecture
+model:
+  model_type: "convnextv2_tiny"  # Using ConvNextV2 with feature extraction
+  hidden_layers: 2
+  hidden_dims: [512, 256]  # Match default hidden dimensions in PerceptionModel
+  dropout_rates: [0.3, 0.2]  # Match default dropout rates in PerceptionModel
+  freeze_backbone: true  # Freeze backbone to reduce memory usage during training
+  backbone_dropout: 0.2   # Apply dropout to backbone features
+  stochastic_depth_rate: 0.1  # Apply stochastic depth rate
+
+# Hyperparameter optimization
+optuna:
+  use_optuna: false  # Skip hyperparameter optimization
+  n_trials: 20
+  trial_epochs: 10
+  final_epochs: 30
+
+# Logging and output
+output:
+  log_every_n_epochs: 1
+  use_wandb: false  # Set to true to enable Weights & Biases logging 

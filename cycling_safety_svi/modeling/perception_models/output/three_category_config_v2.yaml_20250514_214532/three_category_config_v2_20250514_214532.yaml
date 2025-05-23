@@ -1,0 +1,54 @@
+# Configuration optimized for 3-category perception model with best hyperparameters from previous run
+
+# Dataset configuration
+dataset:
+  num_categories: 3  # Using low, medium, high categories
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  seed: 42
+
+# Paths configuration
+paths:
+  # These will be auto-filled based on the system, but can be overridden
+  data_file: "/home/kiito/cycling_safety_svi/data/raw/perceptionratings.csv"
+  img_path: "/srv/shared/bicycle_project_roos/images_scaled"
+  output_dir: "/home/kiito/cycling_safety_svi/cycling_safety_svi/modeling/perception_models/output/three_category_config_v2.yaml_20250514_214532"
+
+# Training parameters based on previous best results
+training:
+  batch_size: 16
+  learning_rate: 0.00015391446222995218  # From best params
+  weight_decay: 0.026453257276556567     # From best params
+  patience: 7
+  workers: 8
+  num_epochs: 60
+  warmup_epochs: 20
+  warmup_type: "linear"  # Options: "linear", "exponential", "cosine"
+  warmup_initial_factor: 0.1  # Initial learning rate will be this factor of the target rate
+  lr_decay_factor: 0.07420914937766805  # From best params
+  scheduler_factor: 0.4566395992413277  # From best params
+  scheduler_patience: 4                  # From best params
+  grad_clip_value: 1.47078459448269     # From best params
+  
+# Model architecture - using best parameters from previous run
+model:
+  hidden_layers: 3                      # From best params
+  hidden_dims: [192, 192, 128]          # From best params
+  dropout_rates: [0.5807705634994895, 0.48930329413821383, 0.5355068200013525]  # From best params
+  freeze_backbone: true                # From best params
+  
+# Hyperparameter optimization
+optuna:
+  use_optuna: false  # Set to false to use the best parameters directly
+  n_trials: 20
+  trial_epochs: 10
+  final_epochs: 50  # Reduced to prevent overfitting
+
+# Logging and output
+output:
+  log_every_n_epochs: 1
+  use_wandb: true
+  wandb_project: "cycling-perception"
+  wandb_entity: "koichi19960406"  # Set to your wandb username/entity
+  wandb_tags: ["3-category", "perception-model", "best-params"] 

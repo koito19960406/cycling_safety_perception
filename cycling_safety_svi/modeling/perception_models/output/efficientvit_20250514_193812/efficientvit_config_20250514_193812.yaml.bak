@@ -1,0 +1,58 @@
+# Configuration for EfficientViT model (efficientvit_m1.r224_in1k)
+
+# Dataset configuration
+dataset:
+  num_categories: 3  # Using low, medium, high categories
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  seed: 42
+  mixup_alpha: 0.2  # Mixup augmentation alpha parameter
+  cutmix_alpha: 0.2  # CutMix augmentation alpha parameter
+
+# Paths configuration
+paths:
+  # These MUST be overridden by command line arguments in the run script
+  data_file: "/home/kiito/cycling_safety_svi/data/raw/perceptionratings.csv"
+  img_path: "/srv/shared/bicycle_project_roos/images_scaled"    # Path to image directory - will be replaced by run script
+  output_dir: "/home/kiito/cycling_safety_svi/cycling_safety_svi/modeling/perception_models/output/efficientvit_20250514_193812"
+
+# Training parameters
+training:
+  batch_size: 128  # Higher batch size for smaller images
+  learning_rate: 0.0001  # Learning rate
+  weight_decay: 0.03
+  patience: 10
+  workers: 8
+  num_epochs: 50
+  warmup_epochs: 20
+  warmup_type: "cosine"
+  warmup_initial_factor: 0.1
+  lr_decay_factor: 0.1
+  scheduler_factor: 0.5
+  scheduler_patience: 4
+  grad_clip_value: 1.5
+  mixed_precision: true  # Enable mixed precision training for memory efficiency
+  label_smoothing: 0.1   # Add label smoothing
+
+# Model architecture
+model:
+  model_type: "efficientvit_m1"  # Using EfficientViT M1 from timm
+  hidden_layers: 2
+  hidden_dims: [512, 256]  # Match default hidden dimensions in PerceptionModel
+  dropout_rates: [0.3, 0.2]  # Match default dropout rates in PerceptionModel
+  freeze_backbone: false  # Don't freeze backbone to allow full model training
+  backbone_dropout: 0.2   # Apply dropout to backbone features
+  stochastic_depth_rate: 0.2  # Apply stochastic depth rate
+
+# Hyperparameter optimization
+optuna:
+  use_optuna: true  # Skip hyperparameter optimization initially
+  n_trials: 20
+  trial_epochs: 10
+  final_epochs: 30
+
+# Logging and output
+output:
+  log_every_n_epochs: 1
+  use_wandb: true  # Set to true to enable Weights & Biases logging 

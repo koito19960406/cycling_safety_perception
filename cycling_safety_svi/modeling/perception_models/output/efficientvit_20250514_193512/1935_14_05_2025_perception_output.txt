@@ -1,0 +1,52 @@
+PERCEPTION MODEL TRAINING STARTED at: 1935_14_05_2025
+Number of categories: 3 (using 3 (low, medium, high) classes)
+Using device: cuda
+Loading data from /home/kiito/cycling_safety_svi/data/raw/perceptionratings.csv
+Dataset loaded: 2634 training samples, 564 validation samples, 566 test samples
+Class weights calculated for balancing:
+  traffic_safety: [1.5180288553237915, 0.9763171076774597, 0.5056540369987488]
+  social_safety: [1.6997554302215576, 0.7526190280914307, 0.5476254820823669]
+  beautiful: [0.993035078048706, 1.0476105213165283, 0.9593544602394104]
+Starting Optuna hyperparameter optimization
+Trial 0: Testing hyperparameters:
+  Learning rate: 2.9268789541398594e-05
+  Weight decay: 0.0666672889094592
+  LR decay factor: 0.08082820126649203
+  Scheduler factor: 0.36788236875269453
+  Scheduler patience: 2
+  Gradient clip value: 1.1754069674827734
+  Hidden layers: 2
+  Hidden dimensions: [128, 64]
+  Dropout rates: [0.4264105158523958, 0.41084072900037616]
+  Freeze backbone: True
+Warmup training for 20 epochs
+Starting perception model training
+1935_14_05_2025	Epoch 001  Train Loss | Val Loss | Best Val Loss	3.677 | 0.054 | 0.054 
+1935_14_05_2025	Epoch 002  Train Loss | Val Loss | Best Val Loss	3.649 | 0.054 | 0.054 
+1935_14_05_2025	Epoch 003  Train Loss | Val Loss | Best Val Loss	3.601 | 0.053 | 0.053 
+1935_14_05_2025	Epoch 004  Train Loss | Val Loss | Best Val Loss	3.598 | 0.053 | 0.053 
+1935_14_05_2025	Epoch 005  Train Loss | Val Loss | Best Val Loss	3.539 | 0.053 | 0.053 
+1935_14_05_2025	Epoch 006  Train Loss | Val Loss | Best Val Loss	3.537 | 0.053 | 0.053 
+1936_14_05_2025	Epoch 007  Train Loss | Val Loss | Best Val Loss	3.516 | 0.053 | 0.053 
+1936_14_05_2025	Epoch 008  Train Loss | Val Loss | Best Val Loss	3.493 | 0.052 | 0.052 
+1936_14_05_2025	Epoch 009  Train Loss | Val Loss | Best Val Loss	3.469 | 0.052 | 0.052 
+1936_14_05_2025	Epoch 010  Train Loss | Val Loss | Best Val Loss	3.444 | 0.052 | 0.052 
+1936_14_05_2025	Epoch 011  Train Loss | Val Loss | Best Val Loss	3.466 | 0.052 | 0.052 
+1936_14_05_2025	Epoch 012  Train Loss | Val Loss | Best Val Loss	3.413 | 0.052 | 0.052 
+1936_14_05_2025	Epoch 013  Train Loss | Val Loss | Best Val Loss	3.412 | 0.052 | 0.052 
+1936_14_05_2025	Epoch 014  Train Loss | Val Loss | Best Val Loss	3.380 | 0.052 | 0.052 
+1936_14_05_2025	Epoch 015  Train Loss | Val Loss | Best Val Loss	3.381 | 0.051 | 0.051 
+1936_14_05_2025	Epoch 016  Train Loss | Val Loss | Best Val Loss	3.390 | 0.051 | 0.051 
+1936_14_05_2025	Epoch 017  Train Loss | Val Loss | Best Val Loss	3.376 | 0.051 | 0.051 
+1937_14_05_2025	Epoch 018  Train Loss | Val Loss | Best Val Loss	3.325 | 0.051 | 0.051 
+1937_14_05_2025	Epoch 019  Train Loss | Val Loss | Best Val Loss	3.345 | 0.051 | 0.051 
+1937_14_05_2025	Epoch 020  Train Loss | Val Loss | Best Val Loss	3.316 | 0.051 | 0.051 
+Trial training for 10 epochs
+Starting perception model training
+1937_14_05_2025	Epoch 001  Train Loss | Val Loss | Best Val Loss	3.332 | 0.051 | 0.051 
+1937_14_05_2025	Epoch 002  Train Loss | Val Loss | Best Val Loss	3.347 | 0.051 | 0.051 
+1937_14_05_2025	Epoch 003  Train Loss | Val Loss | Best Val Loss	3.326 | 0.051 | 0.051 +
+1937_14_05_2025	Epoch 004  Train Loss | Val Loss | Best Val Loss	3.298 | 0.051 | 0.051 
+1937_14_05_2025	Epoch 005  Train Loss | Val Loss | Best Val Loss	3.291 | 0.051 | 0.051 
+1937_14_05_2025	Epoch 006  Train Loss | Val Loss | Best Val Loss	3.314 | 0.051 | 0.051 +
+1937_14_05_2025	Epoch 007  Train Loss | Val Loss | Best Val Loss	3.300 | 0.051 | 0.051 

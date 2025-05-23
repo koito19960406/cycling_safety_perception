@@ -1,0 +1,4 @@
+PERCEPTION MODEL TRAINING STARTED at: 1426_14_05_2025
+Number of categories: 3 (using 3 (low, medium, high) classes)
+Using device: cuda
+Loading data from /home/kiito/cycling_safety_svi/cycling_safety_svi/modeling/perception_models/../../data/rating_three_category.csv
