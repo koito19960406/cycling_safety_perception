@@ -187,3 +187,6 @@ cython_debug/
 
 # ignore any .pt files
 *.pt
+
+# wandb related files
+wandb/
