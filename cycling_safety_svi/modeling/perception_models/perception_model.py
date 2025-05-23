@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+from transformers import AutoImageProcessor, ConvNextV2ForImageClassification, ConvNextV2Model
+import timm  # Import timm for RepVit and EfficientViT models
 
 class CrossAttention(nn.Module):
     """
@@ -110,7 +112,8 @@ class PerceptionModel(nn.Module):
                  hidden_dims=[512, 256], dropout_rates=[0.3, 0.2], 
                  use_cross_attention=False, cross_attn_heads=None,
                  freeze_backbone=False, path_pretrained_model=None,
-                 backbone_dropout=0.0, stochastic_depth_rate=0.0):
+                 backbone_dropout=0.0, stochastic_depth_rate=0.0,
+                 model_type="deit_base"):
         """
         Initialize the perception model
         
@@ -126,11 +129,73 @@ class PerceptionModel(nn.Module):
             path_pretrained_model (str): Path to a pretrained model to load weights from
             backbone_dropout (float): Dropout rate to apply to backbone features
             stochastic_depth_rate (float): Stochastic depth rate for additional regularization
+            model_type (str): Type of model to use as backbone ("deit_base", "convnextv2_tiny", "repvit_m2_3", or "efficientvit_m1")
         """
         super(PerceptionModel, self).__init__()
         
-        # Define the CNN backbone
-        self.vision_model = torch.hub.load('facebookresearch/deit:main', 'deit_base_patch16_384', pretrained=True)
+        # Define the CNN backbone based on model_type
+        self.model_type = model_type
+        
+        if model_type == "convnextv2_tiny":
+            # ConvNextV2 model that returns features instead of classification logits
+            self.vision_model = ConvNextV2ForImageClassification.from_pretrained("facebook/convnextv2-tiny-22k-224")
+            self.feature_dim = 1000  # Output dimension matches DeiT model
+            self.projected_dim = hidden_dims[0] if hidden_dims and len(hidden_dims) > 0 else 512
+            
+            # Add a feature projection layer to map from backbone feature dimension to our model's feature dimension
+            self.feature_projector = nn.Linear(self.feature_dim, self.projected_dim)
+            
+            # Add batch normalization and activation for the projected features
+            self.feature_bn = nn.BatchNorm1d(self.projected_dim)
+            self.feature_relu = nn.ReLU()
+        elif model_type == "repvit_m2_3":
+            # RepVit model from timm
+            base_model = timm.create_model('repvit_m2_3.dist_450e_in1k', pretrained=True)
+            
+            # Extract the feature dimension from the classifier
+            # For RepVit models, the classifier is a Classfier with an embedding_size in the source code
+            # Looking at the source code, we see it's the last layer's output dimension, which is 640 for m2_3
+            self.feature_dim = 640  # Fixed dimension for repvit_m2_3 based on source code
+            self.projected_dim = hidden_dims[0] if hidden_dims and len(hidden_dims) > 0 else 512
+            
+            # Create a new model without the classifier head
+            self.vision_model = timm.create_model(
+                'repvit_m2_3.dist_450e_in1k', 
+                pretrained=True,
+                num_classes=0  # This removes the classifier head
+            )
+            
+            # Add a feature projection layer
+            self.feature_projector = nn.Linear(self.feature_dim, self.projected_dim)
+            self.feature_bn = nn.BatchNorm1d(self.projected_dim)
+            self.feature_relu = nn.ReLU()
+        elif model_type == "efficientvit_m1":
+            # EfficientViT model from timm
+            # Create a model that returns features only (no classification head)
+            self.vision_model = timm.create_model(
+                'efficientvit_m1.r224_in1k',
+                pretrained=True,
+                num_classes=0  # Remove classifier head
+            )
+            
+            # For EfficientViT M1, the feature dimension is 192
+            self.feature_dim = 192
+            self.projected_dim = hidden_dims[0] if hidden_dims and len(hidden_dims) > 0 else 512
+            
+            # Add a feature projection layer
+            self.feature_projector = nn.Linear(self.feature_dim, self.projected_dim)
+            self.feature_bn = nn.BatchNorm1d(self.projected_dim)
+            self.feature_relu = nn.ReLU()
+        else:
+            # Default DeiT model
+            self.vision_model = torch.hub.load('facebookresearch/deit:main', 'deit_base_patch16_384', pretrained=True)
+            self.feature_dim = 1000  # Output dimension of the model
+            self.projected_dim = hidden_dims[0] if hidden_dims and len(hidden_dims) > 0 else 512
+            
+            # For consistency, also add projection for DeiT
+            self.feature_projector = nn.Linear(self.feature_dim, self.projected_dim)
+            self.feature_bn = nn.BatchNorm1d(self.projected_dim)
+            self.feature_relu = nn.ReLU()
         
         # Freeze the vision model if requested
         self.freeze_backbone = freeze_backbone
@@ -168,7 +233,7 @@ class PerceptionModel(nn.Module):
         # Create feature extraction heads
         for _ in range(num_classes):
             layers = []
-            input_dim = 1000  # Output dim of vision model
+            input_dim = self.projected_dim  # Use projected dimension
             
             # Add hidden layers except the last one
             for i in range(hidden_layers - 1):
@@ -193,7 +258,7 @@ class PerceptionModel(nn.Module):
             if hidden_layers > 1:
                 input_dim = hidden_dims[-2]  # Use the second-to-last hidden dim
             else:
-                input_dim = 1000  # Use the output of vision model directly
+                input_dim = self.projected_dim  # Use the projected dimension
                 
             layers.append(nn.Linear(input_dim, hidden_dims[-1]))
             layers.append(nn.BatchNorm1d(hidden_dims[-1]))  # Add batch normalization
@@ -225,8 +290,24 @@ class PerceptionModel(nn.Module):
         """
         # Extract features from image
         with torch.set_grad_enabled(not self.freeze_backbone):
-            feature_map = self.vision_model(image)
-        feature_map = torch.squeeze(feature_map)
+            if self.model_type == "convnextv2_tiny":
+                # Get logits from the classification model (1000-dim)
+                outputs = self.vision_model(image)
+                feature_map = outputs.logits  # [batch_size, 1000]
+            elif self.model_type == "repvit_m2_3":
+                # Forward pass through the model, this will use our Identity head
+                feature_map = self.vision_model(image)  # [batch_size, 640]
+            elif self.model_type == "efficientvit_m1":
+                # Process with EfficientViT
+                feature_map = self.vision_model(image)  # [batch_size, 192]
+            else:
+                # Original DeiT model
+                feature_map = self.vision_model(image)
+        
+        # Apply projection to desired dimension
+        feature_map = self.feature_projector(feature_map)
+        feature_map = self.feature_bn(feature_map)
+        feature_map = self.feature_relu(feature_map)
         
         # If we have a single image, add a dimension
         if len(feature_map.shape) == 1:
@@ -284,7 +365,8 @@ class SinglePerceptionModel(nn.Module):
 
     def __init__(self, perception_type, ordinal_levels=5, hidden_layers=2, 
                  hidden_dims=[512, 256], dropout_rates=[0.3, 0.2], 
-                 freeze_backbone=False, path_pretrained_model=None):
+                 freeze_backbone=False, path_pretrained_model=None,
+                 model_type="deit_base"):
         """
         Initialize a single perception model
         
@@ -296,14 +378,74 @@ class SinglePerceptionModel(nn.Module):
             dropout_rates (list): Dropout rates for each hidden layer
             freeze_backbone (bool): Whether to freeze the vision model backbone
             path_pretrained_model (str): Path to a pretrained model to load weights from
+            model_type (str): Type of model to use as backbone ("deit_base", "convnextv2_tiny", "repvit_m2_3", or "efficientvit_m1")
         """
         super(SinglePerceptionModel, self).__init__()
         
         # Store perception type
         self.perception_type = perception_type
         
-        # Define the CNN backbone
-        self.vision_model = torch.hub.load('facebookresearch/deit:main', 'deit_base_patch16_384', pretrained=True)
+        # Define the CNN backbone based on model_type
+        self.model_type = model_type
+        
+        if model_type == "convnextv2_tiny":
+            # ConvNextV2 model that returns features instead of classification logits
+            self.vision_model = ConvNextV2ForImageClassification.from_pretrained("facebook/convnextv2-tiny-22k-224")
+            self.feature_dim = 1000  # Output dimension matches DeiT model
+            self.projected_dim = hidden_dims[0] if hidden_dims and len(hidden_dims) > 0 else 512
+            
+            # Add a feature projection layer
+            self.feature_projector = nn.Linear(self.feature_dim, self.projected_dim)
+            self.feature_bn = nn.BatchNorm1d(self.projected_dim)
+            self.feature_relu = nn.ReLU()
+        elif model_type == "repvit_m2_3":
+            # RepVit model from timm
+            base_model = timm.create_model('repvit_m2_3.dist_450e_in1k', pretrained=True)
+            
+            # Extract the feature dimension from the classifier
+            # For RepVit models, the classifier is a Classfier with an embedding_size in the source code
+            # Looking at the source code, we see it's the last layer's output dimension, which is 640 for m2_3
+            self.feature_dim = 640  # Fixed dimension for repvit_m2_3 based on source code
+            self.projected_dim = hidden_dims[0] if hidden_dims and len(hidden_dims) > 0 else 512
+            
+            # Create a new model without the classifier head
+            self.vision_model = timm.create_model(
+                'repvit_m2_3.dist_450e_in1k', 
+                pretrained=True,
+                num_classes=0  # This removes the classifier head
+            )
+            
+            # Add a feature projection layer
+            self.feature_projector = nn.Linear(self.feature_dim, self.projected_dim)
+            self.feature_bn = nn.BatchNorm1d(self.projected_dim)
+            self.feature_relu = nn.ReLU()
+        elif model_type == "efficientvit_m1":
+            # EfficientViT model from timm
+            # Create a model that returns features only (no classification head)
+            self.vision_model = timm.create_model(
+                'efficientvit_m1.r224_in1k',
+                pretrained=True,
+                num_classes=0  # Remove classifier head
+            )
+            
+            # For EfficientViT M1, the feature dimension is 192
+            self.feature_dim = 192
+            self.projected_dim = hidden_dims[0] if hidden_dims and len(hidden_dims) > 0 else 512
+            
+            # Add a feature projection layer
+            self.feature_projector = nn.Linear(self.feature_dim, self.projected_dim)
+            self.feature_bn = nn.BatchNorm1d(self.projected_dim)
+            self.feature_relu = nn.ReLU()
+        else:
+            # Default DeiT model
+            self.vision_model = torch.hub.load('facebookresearch/deit:main', 'deit_base_patch16_384', pretrained=True)
+            self.feature_dim = 1000  # Output dimension of the model
+            self.projected_dim = hidden_dims[0] if hidden_dims and len(hidden_dims) > 0 else 512
+            
+            # For consistency, also add projection for DeiT
+            self.feature_projector = nn.Linear(self.feature_dim, self.projected_dim)
+            self.feature_bn = nn.BatchNorm1d(self.projected_dim)
+            self.feature_relu = nn.ReLU()
         
         # Freeze the vision model if requested
         self.freeze_backbone = freeze_backbone
@@ -328,7 +470,7 @@ class SinglePerceptionModel(nn.Module):
         
         # Define the feature extraction head
         layers = []
-        input_dim = 1000  # Output dim of vision model
+        input_dim = self.projected_dim  # Use projected dimension
         
         # Build the entire network as a single sequential model
         for i in range(hidden_layers):
@@ -364,7 +506,25 @@ class SinglePerceptionModel(nn.Module):
         """
         # Extract features from image
         with torch.set_grad_enabled(not self.freeze_backbone):
-            feature_map = self.vision_model(image)
+            if self.model_type == "convnextv2_tiny":
+                # Get logits from the classification model (1000-dim)
+                outputs = self.vision_model(image)
+                feature_map = outputs.logits  # [batch_size, 1000]
+            elif self.model_type == "repvit_m2_3":
+                # Forward pass through the model, this will use our Identity head
+                feature_map = self.vision_model(image)  # [batch_size, 640]
+            elif self.model_type == "efficientvit_m1":
+                # Process with EfficientViT
+                feature_map = self.vision_model(image)  # [batch_size, 192]
+            else:
+                # Original DeiT model
+                feature_map = self.vision_model(image)
+        
+        # Apply projection to desired dimension
+        feature_map = self.feature_projector(feature_map)
+        feature_map = self.feature_bn(feature_map)
+        feature_map = self.feature_relu(feature_map)
+        
         feature_map = torch.squeeze(feature_map)
         
         # If we have a single image, add a dimension

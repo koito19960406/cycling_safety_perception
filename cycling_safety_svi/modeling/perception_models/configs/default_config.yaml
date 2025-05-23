@@ -7,6 +7,7 @@ dataset:
   val_ratio: 0.15
   test_ratio: 0.15
   seed: 42
+  use_z_score: false  # Whether to use z-score standardization (per image normalization)
 
 # Training parameters
 training:
@@ -16,7 +17,7 @@ training:
   patience: 7
   workers: 2
   num_epochs: 60
-  warmup_epochs: 2
+  warmup_epochs: 10
   lr_decay_factor: 0.1
   scheduler_factor: 0.5
   scheduler_patience: 3
@@ -24,6 +25,7 @@ training:
   
 # Model architecture
 model:
+  model_type: "convnextv2_tiny"  # Options: "deit_base" or "convnextv2_tiny"
   hidden_layers: 2
   hidden_dims: [384, 192]
   dropout_rates: [0.4, 0.3]
@@ -31,7 +33,7 @@ model:
   
 # Hyperparameter optimization
 optuna:
-  use_optuna: true
+  use_optuna: false
   n_trials: 20
   trial_epochs: 10
   final_epochs: 60

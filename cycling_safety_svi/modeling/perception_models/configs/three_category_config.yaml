@@ -9,6 +9,7 @@ dataset:
   seed: 42
   mixup_alpha: 0.2  # Mixup augmentation alpha parameter (0 = disabled)
   cutmix_alpha: 0.2  # CutMix augmentation alpha parameter (0 = disabled)
+  use_z_score: false  # Whether to use z-score standardization (per image normalization)
 
 # Paths configuration
 paths:
@@ -37,6 +38,7 @@ training:
   
 # Model architecture - using best parameters from previous run with adjusted dropout
 model:
+  model_type: "deit_base"  # Options: "deit_base" or "convnextv2_tiny"
   hidden_layers: 3                      # From best params
   hidden_dims: [192, 192, 128]          # From best params
   dropout_rates: [0.65, 0.6, 0.55]      # Increased dropout rates for more regularization

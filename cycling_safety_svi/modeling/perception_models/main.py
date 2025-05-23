@@ -257,6 +257,7 @@ def run_training(config):
     # Extract dataset augmentation parameters
     mixup_alpha = config["dataset"].get("mixup_alpha", 0.0)
     cutmix_alpha = config["dataset"].get("cutmix_alpha", 0.0)
+    use_z_score = config["dataset"].get("use_z_score", False)
     
     # Extract training advanced parameters
     mixed_precision = config["training"].get("mixed_precision", False)
@@ -284,6 +285,10 @@ def run_training(config):
     # Display code started
     printLog("PERCEPTION MODEL TRAINING STARTED at:", timestamp)
     printLog(f"Number of categories: {num_categories} (using {'3 (low, medium, high)' if num_categories == 3 else '5 (1-5)'} classes)")
+    if use_z_score:
+        printLog("Using z-score standardization (per-image normalization)")
+    else:
+        printLog("Using standard ImageNet normalization")
 
     # Initialize WandB if enabled
     wandb_run = init_wandb(config, name=f"perception_{timestamp}")
@@ -296,12 +301,17 @@ def run_training(config):
     # Load data
     printLog(f'Loading data from {data_file}')
     
+    # Get the model type from config
+    model_type = config["model"].get("model_type", "deit_base")
+    
     dataset_train = PerceptionDataset(
         data_file=data_file, 
         img_path=img_path, 
         set_type='train', 
         transform=True, 
-        num_categories=num_categories
+        num_categories=num_categories,
+        model_type=model_type,
+        use_z_score=use_z_score
     )
     
     dataset_val = PerceptionDataset(
@@ -309,7 +319,9 @@ def run_training(config):
         img_path=img_path, 
         set_type='val', 
         transform=False, 
-        num_categories=num_categories
+        num_categories=num_categories,
+        model_type=model_type,
+        use_z_score=use_z_score
     )
     
     dataset_test = PerceptionDataset(
@@ -317,7 +329,9 @@ def run_training(config):
         img_path=img_path, 
         set_type='test', 
         transform=False, 
-        num_categories=num_categories
+        num_categories=num_categories,
+        model_type=model_type,
+        use_z_score=use_z_score
     )
     
     printLog(f'Dataset loaded: {len(dataset_train)} training samples, '
@@ -430,7 +444,8 @@ def run_training(config):
                 hidden_layers=num_hidden,
                 hidden_dims=hidden_dims_trial,
                 dropout_rates=dropout_rates_trial,
-                freeze_backbone=freeze_backbone_trial
+                freeze_backbone=freeze_backbone_trial,
+                model_type=config["model"].get("model_type", "deit_base")
             ).to(device)
             
             # Define loss function with class weights
@@ -537,7 +552,8 @@ def run_training(config):
         dropout_rates=dropout_rates,
         freeze_backbone=freeze_backbone,
         backbone_dropout=backbone_dropout,
-        stochastic_depth_rate=stochastic_depth_rate
+        stochastic_depth_rate=stochastic_depth_rate,
+        model_type=config["model"].get("model_type", "deit_base")
     ).to(device)
     
     # Loss function (CrossEntropyLoss with class weights and label smoothing if specified)
@@ -733,7 +749,7 @@ def run_training(config):
 
 
 if __name__ == "__main__":
-    # Get configuration
+    # Get configuration from command line arguments
     config = setup_experiment()
     
     # Initialize paths if not set in config
@@ -747,19 +763,67 @@ if __name__ == "__main__":
     # Set default output_dir if not specified
     if "output_dir" not in config["paths"] or config["paths"]["output_dir"] is None:
         config["paths"]["output_dir"] = str(working_folder / 'output')
-        
+    
     # Set default data paths based on OS
     sys_os = platform.system()
     if sys_os == 'Darwin':  # macOS
         if "img_path" not in config["paths"] or config["paths"]["img_path"] is None:
             config["paths"]["img_path"] = str(Path('/Users/sandervancranenburgh/Documents/Repos_and_data/Data/bicycle_project_roos/images'))
         if "data_file" not in config["paths"] or config["paths"]["data_file"] is None:
-            config["paths"]["data_file"] = str(Path(os.getcwd()).parent.parent.parent / 'data' / 'raw' / 'perceptionratings.csv')
+            config["paths"]["data_file"] = str(Path(os.getcwd()) / 'data' / 'raw' / 'perceptionratings.csv')
     elif sys_os == 'Linux':
         if "img_path" not in config["paths"] or config["paths"]["img_path"] is None:
             config["paths"]["img_path"] = str(Path('/srv/shared/bicycle_project_roos/images_scaled'))
         if "data_file" not in config["paths"] or config["paths"]["data_file"] is None:
-            config["paths"]["data_file"] = str(Path(os.getcwd()).parent.parent.parent / 'data' / 'raw' / 'perceptionratings.csv')
+            #check if 'data/raw' exists in the parent directory
+            if (Path('data') / 'raw').exists():
+                print("Using data from parent directory")
+            config["paths"]["data_file"] = str(Path(os.getcwd()) / 'data' / 'raw' / 'perceptionratings.csv')
+    
+    # Add default model settings if not present
+    if "model" not in config:
+        config["model"] = {}
+    
+    # Set default model parameters if not specified
+    if "model_type" not in config["model"]:
+        config["model"]["model_type"] = "deit_base"  # Default model type
+    
+    # Add ConvNextV2 specific defaults
+    if config["model"]["model_type"] == "convnextv2_tiny":
+        # Set sensible defaults for ConvNextV2
+        if "hidden_layers" not in config["model"]:
+            config["model"]["hidden_layers"] = 2
+        if "hidden_dims" not in config["model"]:
+            config["model"]["hidden_dims"] = [512, 256]
+        if "dropout_rates" not in config["model"]:
+            config["model"]["dropout_rates"] = [0.3, 0.2]
+        if "freeze_backbone" not in config["model"]:
+            config["model"]["freeze_backbone"] = True
+        if "backbone_dropout" not in config["model"]:
+            config["model"]["backbone_dropout"] = 0.2
+        if "stochastic_depth_rate" not in config["model"]:
+            config["model"]["stochastic_depth_rate"] = 0.1
+    
+    # Set or override training parameters for ConvNextV2 to avoid CUDA OOM
+    if config["model"]["model_type"] == "convnextv2_tiny":
+        # Ensure training section exists
+        if "training" not in config:
+            config["training"] = {}
+        
+        # Set reasonable batch size for ConvNextV2 if not specified or too high
+        if "batch_size" not in config["training"] or config["training"]["batch_size"] > 8:
+            config["training"]["batch_size"] = 8  # Reduced batch size to prevent CUDA OOM
+        
+        # Set mixed precision to True for memory efficiency
+        if "mixed_precision" not in config["training"]:
+            config["training"]["mixed_precision"] = True
+    
+    # Add debugging info
+    print("Using configuration:")
+    print(f"  Model type: {config['model']['model_type']}")
+    print(f"  Data file: {config['paths']['data_file']}")
+    print(f"  Image path: {config['paths']['img_path']}")
+    print(f"  Output directory: {config['paths']['output_dir']}")
     
     # Validate that all required paths exist
     if not config["paths"].get("data_file"):

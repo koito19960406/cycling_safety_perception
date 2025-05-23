@@ -1,0 +1,62 @@
+# Configuration optimized for 3-category perception model with z-score standardization
+
+# Dataset configuration
+dataset:
+  num_categories: 3  # Using low, medium, high categories
+  train_ratio: 0.7
+  val_ratio: 0.15
+  test_ratio: 0.15
+  seed: 42
+  mixup_alpha: 0.3  # Increased slightly for more regularization
+  cutmix_alpha: 0.3  # Increased slightly for more regularization
+  use_z_score: true  # Enable z-score standardization (per image normalization)
+
+# Paths configuration
+paths:
+  # These will be auto-filled based on the system, but can be overridden
+  data_file: null  # Path to perception ratings CSV
+  img_path: null   # Path to image directory
+  output_dir: null # Directory to save results
+
+# Training parameters - potentially adjusted for z-score standardization
+training:
+  batch_size: 16
+  learning_rate: 0.0002  # Slightly higher learning rate may work better with z-score
+  weight_decay: 0.03  # Lower weight decay since z-score standardization provides regularization
+  patience: 12  # Increased patience for potentially different convergence patterns
+  workers: 2
+  num_epochs: 80
+  warmup_epochs: 12
+  warmup_type: "cosine"
+  warmup_initial_factor: 0.05
+  lr_decay_factor: 0.08
+  scheduler_factor: 0.45
+  scheduler_patience: 4
+  grad_clip_value: 1.5  # Increased slightly for more stability
+  mixed_precision: true
+  label_smoothing: 0.08  # Slightly reduced from 0.1
+  
+# Model architecture - adjusted for z-score standardization
+model:
+  model_type: "deit_base"
+  hidden_layers: 2  # Reduced from 3 to 2 since z-score may need less complex model
+  hidden_dims: [192, 128]  # Simplified architecture
+  dropout_rates: [0.55, 0.5]  # Reduced slightly since z-score provides regularization
+  freeze_backbone: false  # Allow backbone to adapt to z-score standardized images
+  backbone_dropout: 0.15  # Reduced from 0.2
+  stochastic_depth_rate: 0.08  # Reduced from 0.1
+  
+# Hyperparameter optimization
+optuna:
+  use_optuna: false
+  n_trials: 20
+  trial_epochs: 10
+  final_epochs: 60
+
+# Logging and output
+output:
+  log_every_n_epochs: 1
+  use_wandb: true
+  wandb_project: "cycling-perception"
+  wandb_entity: "koichi19960406"
+  wandb_tags: ["3-category", "perception-model", "z-score-standardization"] 

@@ -4,6 +4,7 @@ This module contains code for training perception models that predict perception
 
 ## Recent Updates
 
+- **ConvNextV2 Support**: Added support for the Facebook ConvNextV2 model with feature extraction
 - **YAML Configuration**: Moved all hyperparameters to YAML config files
 - **Weights & Biases Integration**: Added WandB support for experiment tracking
 - **Improved Evaluation**: Enhanced metrics reporting with confusion matrices and per-class metrics
@@ -21,7 +22,29 @@ pip install -r requirements.txt
 
 ## Training a Model
 
-The simplest way to train a model is to use the default configuration:
+### Using Scripts (Recommended)
+
+The easiest way to train a model is to use the provided scripts in the `scripts` directory:
+
+```bash
+# Run RepVit model
+./scripts/run_repvit.sh
+
+# Run ConvNextV2 model
+./scripts/run_convnextv2.sh
+
+# Run augmented model
+./scripts/run_augmented.sh
+
+# Or use any config file directly
+./scripts/run_model.sh your_config.yaml
+```
+
+These scripts automatically handle path setup, config copying, and more. See `scripts/README.md` for details.
+
+### Manual Training
+
+Alternatively, you can run the training manually:
 
 ```bash
 python main.py
@@ -85,10 +108,13 @@ The following parameters can be configured:
 
 #### Model Architecture
 
+- `model_type`: Type of model to use ("deit_base" or "convnextv2_tiny")
 - `hidden_layers`: Number of hidden layers
 - `hidden_dims`: List of hidden dimensions
 - `dropout_rates`: List of dropout rates
 - `freeze_backbone`: Whether to freeze the vision model backbone
+- `backbone_dropout`: Dropout rate for backbone features (only for ConvNextV2)
+- `stochastic_depth_rate`: Stochastic depth rate for regularization (only for ConvNextV2)
 
 #### Hyperparameter Optimization
 
@@ -138,8 +164,27 @@ output:
 
 In the 3-category system, perception ratings are categorized as follows:
 
-- **Low**: Ratings 1-2
-- **Medium**: Rating 3
-- **High**: Ratings 4-5
+- **Low**: Rating 1
+- **Medium**: Ratings 2-3-4
+- **High**: Rating 5
 
-This provides a more balanced distribution of classes and focuses on the practical differences between low, medium, and high perception ratings. 
+This provides a clearer distinction between extreme ratings (1 and 5) and more neutral ratings (2-4), focusing on the most significant differences in perception.
+
+### Model Types
+
+The following model types are supported:
+
+- **deit_base**: The default model using DeiT (Data-efficient Image Transformer) as backbone
+- **convnextv2_tiny**: ConvNextV2 model from Facebook AI Research with feature extraction from intermediate layers
+
+To use the ConvNextV2 model with feature extraction:
+
+```bash
+./run_convnextv2_model.sh
+```
+
+Or manually with:
+
+```bash
+python main.py --config configs/your_config.yaml --model_type convnextv2_tiny
+``` 

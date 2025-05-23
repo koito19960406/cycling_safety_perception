@@ -135,7 +135,6 @@ def train(model, train_loader, val_loader, criterion, weight_decay, learning_rat
         mode='min', 
         factor=scheduler_factor, 
         patience=scheduler_patience, 
-        verbose=True
     )
     
     # Initialize lists to store loss
@@ -191,7 +190,8 @@ def train(model, train_loader, val_loader, criterion, weight_decay, learning_rat
         # Model selection - save best model
         if epoch_val_loss < best_val_loss:
             best_val_loss = epoch_val_loss
-            best_model = deepcopy(model)
+            # Save model state dict instead of using deepcopy
+            best_model_state_dict = {k: v.cpu().detach().clone() for k, v in model.state_dict().items()}
             early_stop_counter = 0
         else:
             early_stop_counter += 1
@@ -230,7 +230,23 @@ def train(model, train_loader, val_loader, criterion, weight_decay, learning_rat
                 printLog("Pruning trial...")
                 raise optuna.exceptions.TrialPruned()
     
-    if best_model is None:
+    # Create a new model with the same architecture and load the best weights
+    if 'best_model_state_dict' in locals():
+        # Create a new instance of the same model class
+        best_model = type(model)(
+            num_classes=3,
+            ordinal_levels=model.classifiers[0][-1].out_features,
+            hidden_layers=model.hidden_layers,
+            hidden_dims=model.hidden_dims,
+            dropout_rates=model.dropout_rates,
+            freeze_backbone=model.freeze_backbone,
+            model_type=model.model_type
+        ).to(device)
+        
+        # Load best state dict
+        best_model.load_state_dict(best_model_state_dict)
+    else:
+        # If no best model was saved, use the final model
         best_model = model
         
     # Return best model and loss history
@@ -264,7 +280,7 @@ def train_epoch(model, data_loader, optimizer, criterion, device, epoch, grad_cl
     batch_count = len(data_loader)
     
     # Set up mixed precision scaler if enabled
-    scaler = torch.cuda.amp.GradScaler() if mixed_precision else None
+    scaler = torch.amp.GradScaler('cuda') if mixed_precision else None
     
     for batch_idx, batch in enumerate(data_loader):
         # Move batch to device
@@ -297,7 +313,7 @@ def train_epoch(model, data_loader, optimizer, criterion, device, epoch, grad_cl
         
         # Forward pass with mixed precision if enabled
         if mixed_precision:
-            with torch.cuda.amp.autocast():
+            with torch.amp.autocast('cuda'):
                 outputs = model(images)
                 
                 # Calculate loss
@@ -404,7 +420,9 @@ def eval_epoch(model, data_loader, criterion, device, epoch):
             # Calculate loss for each perception variable and sum them
             loss = 0
             for i, perception_name in enumerate(['traffic_safety', 'social_safety', 'beautiful']):
-                loss += criterion(perceptions[i], batch[perception_name])
+                # Use the same label format as in training
+                target_key = f'{perception_name}_cat' if f'{perception_name}_cat' in batch else perception_name
+                loss += criterion(perceptions[i], batch[target_key])
             
             # Update total loss and instance count
             total_loss += loss.item()

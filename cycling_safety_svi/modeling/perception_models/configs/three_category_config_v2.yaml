@@ -21,9 +21,9 @@ training:
   learning_rate: 0.00015391446222995218  # From best params
   weight_decay: 0.026453257276556567     # From best params
   patience: 7
-  workers: 2
+  workers: 8
   num_epochs: 60
-  warmup_epochs: 10
+  warmup_epochs: 20
   warmup_type: "linear"  # Options: "linear", "exponential", "cosine"
   warmup_initial_factor: 0.1  # Initial learning rate will be this factor of the target rate
   lr_decay_factor: 0.07420914937766805  # From best params

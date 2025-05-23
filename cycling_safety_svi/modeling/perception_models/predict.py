@@ -18,14 +18,20 @@ from perception_model import PerceptionModel
 from perception_dataset import PerceptionDataset, data_to_device
 from torch.utils.data import DataLoader
 
-# Load image processor
-image_processor = AutoImageProcessor.from_pretrained('facebook/deit-base-distilled-patch16-224')
-image_processor.size['height'] = 384
-image_processor.size['width'] = 384
-image_processor.do_center_crop = False
+# Load image processors for different model types
+image_processors = {
+    'deit_base': AutoImageProcessor.from_pretrained('facebook/deit-base-distilled-patch16-224'),
+    'convnextv2_tiny': AutoImageProcessor.from_pretrained('facebook/convnextv2-tiny-22k-224')
+}
+
+# Set common configurations for image processors
+for processor in image_processors.values():
+    processor.size['height'] = 384
+    processor.size['width'] = 384
+    processor.do_center_crop = False
 
 
-def predict_single_image(model, image_path, device):
+def predict_single_image(model, image_path, device, model_type='deit_base'):
     """
     Make prediction for a single image
     
@@ -33,6 +39,7 @@ def predict_single_image(model, image_path, device):
         model: PerceptionModel instance
         image_path: Path to the image
         device: Computation device
+        model_type: Type of model ('deit_base' or 'convnextv2_tiny')
         
     Returns:
         Dictionary with predictions for each perception variable
@@ -44,6 +51,9 @@ def predict_single_image(model, image_path, device):
     if image.ndim == 2:
         image = np.atleast_3d(image)
         image = np.tile(image, 3)
+    
+    # Select the appropriate image processor based on model type
+    image_processor = image_processors[model_type]
     
     # Transform image
     image_tensor = image_processor(image, return_tensors="pt").pixel_values[0]
@@ -117,14 +127,14 @@ def main(args):
     print(f"Using device: {device}")
     
     # Load model
-    model = PerceptionModel(num_classes=3, ordinal_levels=args.num_categories)
+    model = PerceptionModel(num_classes=3, ordinal_levels=args.num_categories, model_type=args.model_type)
     model.load_state_dict(torch.load(args.model_path, map_location=device))
     model = model.to(device)
-    print(f"Model loaded from {args.model_path}")
+    print(f"Model loaded from {args.model_path} with backbone: {args.model_type}")
     
     if args.image_path:
         # Predict for a single image
-        result = predict_single_image(model, args.image_path, device)
+        result = predict_single_image(model, args.image_path, device, model_type=args.model_type)
         print("\nPredictions:")
         for key, value in result.items():
             if key != 'image_path':
@@ -138,7 +148,7 @@ def main(args):
         # Create dataset and dataloader
         results = []
         for image_path in tqdm(image_files, desc="Predicting"):
-            result = predict_single_image(model, image_path, device)
+            result = predict_single_image(model, image_path, device, model_type=args.model_type)
             # Extract just the filename from the path
             result['img_name'] = os.path.basename(image_path)
             results.append(result)
@@ -198,6 +208,9 @@ if __name__ == "__main__":
     # Additional options
     parser.add_argument("--num_categories", type=int, default=5,
                         help="Number of ordinal categories for perception ratings (3 or 5)")
+    parser.add_argument("--model_type", type=str, default="deit_base",
+                        choices=["deit_base", "convnextv2_tiny"],
+                        help="Type of model backbone to use")
     parser.add_argument("--batch_size", type=int, default=16,
                         help="Batch size for evaluation")
     parser.add_argument("--workers", type=int, default=4,
