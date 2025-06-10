@@ -42,7 +42,8 @@ segmenter = Segmenter(
 
 segmenter.segment(
     dir_input=DEFAULT_INPUT_DIR,
-    dir_summary_output=DEFAULT_SUMMARY_DIR,
+    dir_summary_output=None,
+    dir_image_output=DEFAULT_OUTPUT_DIR,
     batch_size=16,
     save_format='csv',
     csv_format='wide',
