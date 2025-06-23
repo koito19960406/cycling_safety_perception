@@ -249,6 +249,12 @@ def create_visualizations(pearson_df, spearman_df, merged_df, features):
     # 2. Correlation matrix heatmap
     corr_matrix = create_correlation_matrix(merged_df, features, method='pearson')
     
+    # Save correlation matrix to CSV and TXT
+    os.makedirs('data/processed', exist_ok=True)
+    corr_matrix.to_csv('data/processed/correlation_matrix.csv')
+    corr_matrix.to_string(buf=open('data/processed/correlation_matrix.txt', 'w'))
+    logger.info("Correlation matrix saved to data/processed/correlation_matrix.csv and correlation_matrix.txt")
+    
     plt.figure(figsize=(14, 12))
     mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
     sns.heatmap(corr_matrix, annot=True, cmap='RdBu_r', center=0, 

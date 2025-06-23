@@ -1,0 +1,43 @@
+\begin{table}[htbp]
+    \centering
+    \caption{Training and estimation results}
+    \begin{tabular}{lccc}
+    \hline
+     & \textbf{Model 1} & \textbf{Model 2} & \textbf{Model 3} \\
+    \textbf{Model type} & CV-DCM & RUM-MNL & RUM-MNL \\
+    \textbf{Number of parameters} & 86m & 2 & 15 \\
+    \textbf{Estimation time} & 1.5 hour & <1 sec & <1 sec \\
+    \hline
+    \multicolumn{4}{l}{\textit{Train Set (N = 9,135)}} \\
+    Log-Likelihood & -5,656 & -6,157 & -5,704 \\
+    Rho-squared & 0.109 & 0.028 & 0.099 \\
+    Cross-entropy & 0.617 & 0.674 & 0.624 \\
+    BIC & -- & 12,332 & 11,208 \\
+    \hline
+    \multicolumn{4}{l}{\textit{Test Set (N = 2,128)}} \\
+    Log-Likelihood & -1,326 & -1,421 & -1,339 \\
+    Rho-squared & 0.101 & 0.036 & 0.092 \\
+    Cross-entropy & 0.623 & 0.668 & 0.629 \\
+    BIC & -- & 2,857 & 2,793 \\
+    \hline
+    \multicolumn{4}{l}{\textit{Parameter Estimates}} \\
+    \textbf{Parameter} & \textbf{Est.} & \textbf{S.E.} & \textbf{p-val} \\
+    $\beta_{tt}$ & -0.11 & 0.012 & 0.00 \\
+    $\beta_{tl}$ & -0.23 & 0.0215 & 0.00 \\
+    $\beta_{\text{suggestionlane}}$ & -0.05 & 0.054 & 0.37 \\
+    $\beta_{\text{separatedlane}}$ & 0.36 & 0.054 & 0.00 \\
+    $\beta_{\text{klinkers}}$ & -0.11 & 0.041 & 0.01 \\
+    $\beta_{\text{sunny}}$ & 0.09 & 0.033 & 0.01 \\
+    $\beta_{\text{brightness}}$ & 0.04 & 0.008 & 0.00 \\
+    $\beta_{\text{trees}}$ & 0.10 & 0.015 & 0.00 \\
+    $\beta_{\text{water}}$ & 0.18 & 0.038 & 0.00 \\
+    $\beta_{\text{house}}$ & -0.31 & 0.049 & 0.00 \\
+    $\beta_{\text{industrial}}$ & -0.63 & 0.059 & 0.00 \\
+    $\beta_{\text{gras}}$ & 0.24 & 0.038 & 0.00 \\
+    $\beta_{\text{parking}}$ & -0.09 & 0.039 & 0.02 \\
+    $\beta_{\text{tram}}$ & -0.23 & 0.107 & 0.03 \\
+    $\beta_{\text{plants}}$ & 0.03 & 0.037 & 0.45 \\
+    WTP traffic light [min] & 2.38 & 0.2522 & 0.00 \\
+    \hline
+    \end{tabular}
+    \end{table}

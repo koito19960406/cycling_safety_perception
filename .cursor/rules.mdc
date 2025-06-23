@@ -1,0 +1,18 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+- In this project, I'm writing an academic paper. Please follow my instruction extremely closely without editing anything other than what I ask you to edit.
+- If you feel like you need a citation, please write "[Citation Needed]" at the end of the sentence.
+- When you are writing based on the figures or model results, only write things that can be justified by the actual results.
+- Any writing should be professional and academic while ensuring that the texts are 100% human written. Simpler words > complex words. Use plain language whenevery possible.
+- Proof-read what you've written at least once and evaluate if any sentence seems like AI-written. Rewrite any seemingly AI-written or hard-to-understand sentences.
+- Every time you write, do something like this:
+
+While True:
+ if isHumanWrittenLevel > .99 & isHighQualityAcademicWriting > .99:
+  break
+ else:
+   improveWriting()
+  

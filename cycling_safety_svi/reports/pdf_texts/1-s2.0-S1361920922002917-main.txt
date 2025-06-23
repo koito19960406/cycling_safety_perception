@@ -1,0 +1,535 @@
+Transportation Research Part D 111 (2022) 103465
+Available online 29 September 2022
+1361-9209/© 2022 Elsevier Ltd. All rights reserved.
+Attractive infrastructure for everyone? Different preferences for 
+route characteristics among cyclists 
+Michael Hardinghaus , Jan Weschke
+* 
+German Aerospace Center DLR, Institute of Transport Research, Berlin, Germany   
+ARTICLE INFO  
+Keywords: 
+Bike infrastructure 
+Route preferences 
+Discrete choice experiment 
+Equity 
+Active transport 
+Cycling 
+Older adults 
+Children 
+Women 
+ABSTRACT  
+Knowing about the specific route preferences of demographic groups is crucial when researching 
+equity in cycling. In this study, we use a large-scale stated-preference experiment with 4389 
+respondents and 35,112 choice observations to evaluate route choice behavior. We set up discrete 
+route choice models and focus on the specific needs of women, people cycling with children, and 
+older adults. Results show that all groups of interest show higher, but not fundamentally different, 
+route requirements. In this context, lower speed limits for motorized transport are very important 
+for people cycling with children, and older adults. In addition, women and those traveling with 
+children attach significantly higher value to separated bike infrastructure. These results show that 
+vulnerable road users benefit stronger from a bike-friendly road infrastructure than the cyclist 
+population as a whole.   
+1. Introduction 
+Unlike motorized transport, cycling has major advantages regarding emissions of CO
+2
+, pollutants, and further negative externalities 
+( Makarova, Mavrin, Magdin, Shubenkova, & Boyko, 2019 ). Cycling as a cost-efficient, healthy mode of transport is also beneficial for 
+the individual ( Lee et al., 2012; Mueller et al., 2015 ). Physical inactivity is known to be a major cause of chronic diseases and 
+significantly harms public health ( Blair, 2009; Ding et al., 2016 ). At the same time, research has demonstrated strong positive in -
+terrelations between a better quality and quantity of the bike infrastructure and cycling levels ( Buehler & Pucher, 2011; Hardinghaus, 
+Nieland, Lehne, & Weschke, 2021; Winters, Teschke, Brauer, & Fuller, 2016 ). Consequently, better bike infrastructure is associated 
+with improvements in public health ( Mueller et al., 2018 ). Thus, many cities all over the world are improving cycling conditions and 
+investing in bike infrastructure ( Lanzendorf & Busch-Geertsema, 2014 ). 
+In recent scientific literature, however, we are experiencing growing concerns regarding the inequity of the developments 
+described. The main question in this discussion is whether all groups in society have the same access to good bike infrastructure and 
+may benefit from the redesign of the streetscape ( Sheller, 2015 ). These equity concerns slowly started to attract more attention when 
+the redesign of the urban road infrastructure picked up speed at the beginning of the 21st century. Before that, in many places the 
+concept of vehicular cycling opposed separated bike infrastructure ( Forester, 1993 ). Accordingly, the group accommodated by such a 
+concept consisted mainly of middle-aged males ( Schultheiss, Sanders, & Toole, 2018 ). 
+The research body associated with equity of the bike infrastructure is currently growing. Mora et al. (2021) evaluate the acces -
+sibility of bike infrastructure in Santiago de Chile. The authors focus on income and conclude that wealthier groups have better access 
+* Corresponding author. 
+E-mail addresses: Michael.Hardinghaus@dlr.de (M. Hardinghaus), Jan.Weschke@dlr.de (J. Weschke).  
+Contents lists available at ScienceDirect 
+Transportation Research Part D 
+journal homepag e: www.el sevier.com/loc ate/trd 
+https://doi.org/10.1016/j.trd.2022.103465 
+Received 9 May 2022; Received in revised form 27 July 2022; Accepted 15 September 2022   Transportation Research Part D 111 (2022) 103465
+2
+to bike infrastructure (Mora, Truffello, & Oyarzún, 2021). Tucker and Manaugh (2018) draw a similar conclusion from a study in Brazil 
+(Tucker & Manaugh, 2018). Similar results are also obtained from multi-city approaches in the US (Braun, Rodriguez, & Gordon- 
+Larsen, 2019; Flanagan, Lachapelle, & El-Geneidy, 2016). Doran et al. (2021) explicitly mentioned women and seniors when claim -
+ing that not all groups had access to adequate infrastructure in Canada (Doran, El-Geneidy, & Manaugh, 2021). This research focuses 
+on marginalized groups and income as well as demographic variables. A recent study from New York shows that an upgraded bike 
+infrastructure increases the share of female cyclists (AitBihiOuali & Klingen, 2022). 
+On the other hand, different route preferences for various sociodemographic indicators are also of interest. There is a large body of 
+research on cyclists’ route preferences using various research approaches. Previous studies use stated-preference choice experiments 
+(Clark, Mokhtarian, Circella, & Watkins, 2019; Winters & Teschke, 2010), revealed preference approaches (Broach, Dill, & Gliebe, 
+2012; Hardinghaus & Nieland, 2021; Pritchard, 2018) or qualitative approaches (Barratt, 2017; Van Cauwenberg et al., 2018). Thus, 
+not all studies focus on investigating different preferences for relevant subgroups or even differentiate between them. When consid -
+ered, results differ accordingly. In a review of 54 stated-preference studies, Aldred et al. (2016) conclude that women clearly have a 
+stronger preference for separated infrastructure than men do (Aldred, Elliott, Woodcock, & Goodman, 2016). Vedel et al. (2017) find 
+similar results (Vedel, Jacobsen, & Skov-Petersen, 2017). Results also indicate a stronger preference for separated infrastructure 
+among older adults but, due to contradictory findings of the studies included, evidence is limited (Aldred et al., 2016). Other stated- 
+preference studies find little difference between the route choice of women and men (Clark et al., 2019; Rowangould & Tayarani, 
+2016). Winters and Teschke (2010) investigate route preferences of “the near market for cycling” and find higher route requirements 
+among women as well as people who cycle less often (Winters & Teschke, 2010). 
+Other research defines the subgroup of interest beforehand and focuses on the specific needs of this group (Garrard, Handy, & Dill, 
+2012; Ghekiere et al., 2014). In a qualitative approach, Russel et al. (2021) reveal a high burden of women’s safety concerns regarding 
+cycling in New Zealand (Russell, Davies, Wild, & Shaw, 2021). Desjardins et al. (2021) in Canada (Desjardins et al., 2021) present 
+another qualitative approach for the case of a city catching up in bike infrastructure. In Belgium, Van Cauwenberg et al. (2018) use 
+bike-along interviews to figure out environmental themes that influence seniors’ cycling experience (Van Cauwenberg et al., 2018). 
+Bike-along interviews are also used by Ghekiere et al. (2014) to investigate environmental factors that influence cycling among 
+children (Ghekiere et al., 2014). Such approaches deliver valuable and detailed insights into the specific groups but have limitations 
+when it comes to comparability with the majority of society. Earlier studies also have limitations regarding the sample size, the specific 
+local spatial context, and the integration of comprehensive as well as innovative street properties. As a consequence, it remains unclear 
+to what extent the route preferences of certain groups differ from the majority. This is crucial when aiming to infer recommendations 
+for planning and practice with regard to municipal cycle strategies. In addition, this knowledge enables us to evaluate bike-friendly city 
+development, and in particular its equity conditions, from the perspective of subgroups. 
+On one hand, equity in the supply of bicycle infrastructure means a spatially equal distribution that all neighborhoods benefit from. 
+On the other hand, it means an infrastructure that is designed in such a way that different groups benefit equally given their specific 
+needs. We can only fully evaluate the equity in supply of bicycle infrastructure if we have better knowledge of these specific needs in all 
+groups of society. This is particularly important, since transport planners are often predominantly middle-aged males which may lead 
+to disadvantages for women in the production of space (Burgess, 2008; Little, 1994; Tummers & Wankiewicz, 2020). Hence, it is 
+crucial to evaluate whether the claims defined and the decisions made meet the demand of groups with less inclusion. At the same time, 
+earlier research was aimed at large-scale quantitative studies to evaluate influences on cycling experience in subgroups (Van Cau -
+wenberg et al., 2018). 
+Hence, in this study we conduct a large-scale choice experiment right across Germany to investigate route preferences for various 
+relevant road properties. In the evaluation, we focus on the requirements of women, seniors and those cycling with children, since 
+literature suggests that these groups have specific needs regarding infrastructure and corresponding route preferences. 
+2. Methods and data 
+In the present study, we use data from a large online survey conducted in 2018 (Hardinghaus & Papantoniou, 2020). In the survey, 
+an online discrete route choice experiment was carried out. It was enriched with sketches presenting the according streetscape to the 
+participants. Respondents had to choose between three different routes with varying travel time and route environments with an opt- 
+out option (choose not to cycle at all). Table 1 shows the attributes of each choice and corresponding levels. In addition to the actual 
+Table 1 
+Attributes and levels used in the experiment.  
+Attribute Levels 
+Street type Arterial road | Side street 
+Cycle infrastructure No cycle infrastructure | Bike lane | Cycle path | Protected bike lane 
+Regulation Maximum car speed: 50 km/h | Maximum car speed: 30 km/h / Zone 30 |Cycle street (residents only)  
+| Living street 
+Surface Cobblestones | Asphalt 
+Parking No on-street parking | On-street parking 
+Trees No trees | Trees 
+Travel time [minutes] 8 | 10 | 12 | 15 
+Bold indicates the reference scenarios. Source (Hardinghaus & Papantoniou, 2020). 
+M. Hardinghaus and J. Weschke                                                                                                                                                                                   Transportation Research Part D 111 (2022) 103465
+3
+experiment, participants were requested to provide various sociodemographic data in the online poll. Survey respondents were 
+recruited via social media, the German national cycle portal, universities, and cycling associations. In total, 4,463 people from Ger -
+many participated. In addition, the survey was also translated into other languages and distributed in other European countries. The 
+present study, however, only uses the data from participants in Germany (see section Sample for further information on sociodemo -
+graphic distribution). Due to the survey distribution method, the sample may be self-selective and biased towards regular cyclists, and 
+therefore not representative of the entire population. However, when assessing route preferences of cyclists (regarding cycling 
+infrastructure), it is the respondents who ride a bike that are of particular interest. 
+The experiment was based on a Bayesian efficient design using the data originating from a pretest designed in a manual design and 
+the software Ngene ( Bliemer & Rose, 2006 ). The experiment was set up with eight choice situations in which respondents had to 
+choose between three route alternatives and the no-choice alternative (meaning the trip would not be taken under the conditions 
+offered) for a recently made trip. For more variance, the choice situations alternated in three blocks (totaling 24 different choice 
+situations). An example choice situation is illustrated in Fig. 1 . 
+Comprehensive information about the conceptualization of the experiment and the recruitment strategy are described in the 
+original resource ( Hardinghaus & Papantoniou, 2020 ). 
+2.1. Sample 
+The sample used for the analysis in this paper includes all the observations of respondents from Germany who provided information 
+regarding their age, gender and whether or not they cycle with children. This leads to a total of 4,389 respondents which adds up to 
+35,112 choice observations from the experiment. As this paper estimates preferences for infrastructure characteristics when riding a 
+bike for different sociodemographic groups, Table 2 shows distributions of age, gender, frequency of riding a bike, and cycling with 
+children for the full sample but also separated according to the user groups analyzed. When compared with national travel survey data, 
+it can be confirmed that there are more male cyclists than female cyclists in Germany, even if the nine percentage points difference is 
+much smaller than in this sample ( Nobis, 2019 ). Compared to the German population, the overall frequency of cycling is much higher 
+in the sample. In Germany, 18% of the population cycle daily, while 36% never or almost never cycle ( Nobis, 2019 ). In the present 
+sample, these groups consist of 75% and 0.8%, respectively. Considering the German population as a whole, cycling levels are highest 
+among teenagers, while in the age groups between 20 and 79 years, the share of regular cyclists (cycling at least once a month) differs 
+by only four percentage points ( Nobis, 2019 ). Hence, young adults are overrepresented in the present sample. 
+When looking at the sample distributions of the respective user groups, distribution of age, frequency, and cycling with children are 
+pretty similar in males and females. Some differences exist in the 18 to 24-year age group where the share of males is higher than the 
+share of females which is reversed for the 45 to 54 and 55 to 64 year age groups. Also, at 16.5%, the share of women cycling with 
+children is slightly higher than for males at almost 13%. There is a much greater inequality in the distributions differentiated by the 
+factor of whether cycling with children or not particularly with regard to age, which is pretty much to be expected as it is mostly 
+parents with young children who cycle with them. This means that most of the observations for the group with children are among the 
+25 to 54-year-olds. Distributions of other categories, however, match much more closely. Roughly 2.5% of the respondents are 65 years 
+Fig. 1. Example choice situation ( Hardinghaus & Papantoniou, 2020 ).  
+M. Hardinghaus and J. Weschke                                                                                                                                                                                   Transportation Research Part D 111 (2022) 103465
+4
+old or older. The different distributions of sociodemographic variables which exist between these older respondents and the other 
+participants reveal the greatest differences, in contrast to the two previous comparisons. Among the group of older participants, the 
+share of males is even higher (77.5%) than for the other respondents. The older respondents also cycle less on a daily basis and 
+consequently more often only 1 to 3 days a week, which might be due to higher numbers of this group being retirees and resulting in 
+less commuting by bike. Also, at less than 2%, only a very small fraction of older participants cycle with children. 
+2.2. Modeling strategy 
+The data from the stated choice experiment is analyzed using multinomial logit (MNL) models. Following McFadden (1973) , MNL- 
+models are based on the assumption of random utility theory which says that the utility U of each alternative consists of a deterministic 
+component V and a stochastic component ε ( McFadden, 1973 ). The deterministic component V is the observed part of the utility and 
+depends on the parameter values β . The deterministic utility of alternative i for individual n in a linear functional form can then be 
+described as V
+ni
+= β
+’
+x
+ni 
+with x
+ni 
+being the attributes of alternative i for individual n . It is assumed that rational individuals will always 
+choose the alternative which brings them the highest utility. As each respondent of the stated-preference experiment faced eight choice 
+situations, a mixed logit model with error components is applied to account for the panel effect ( Train, 2009 ). In the mixed logit model, 
+the choice probabilities P
+n , i 
+are the weighted mean of the multinomial logit probabilities L
+n , i
+( β ) over a density distribution f ( β | θ ) with θ 
+being the parameters of the distribution (mean and variance). The parameters are then estimated using maximum likelihood 
+estimation. 
+P
+n , i
+=
+∫
+L
+n , i
+( β ) f ( β | θ ) d β  
+L
+n , i
+( β ) =
+e
+V ni
+∑
+J
+j = 1
+e
+V nj 
+To model differences between the user groups, four models were estimated. Model 1 is the base model, estimating parameters for 
+the infrastructure characteristics as average for all respondents, disregarding their user group (i.e. no interaction terms or other 
+recognition of sociodemographic variables). Models 2, 3 and 4 then estimate the parameters for infrastructure characteristics 
+differentiated by the characteristics gender, cycling with children, and age, respectively, using interaction between the variables. First 
+of all, in each model separate parameters were estimated for all variables and tested for significant difference at 5% level. Subse -
+quently, only those parameters that differed significantly were remained separately in the model, while the others were estimated as 
+joint parameters. 
+3. Results 
+The results of the estimated models are shown in Table 3 . The estimation results were obtained following the previously explained 
+modeling strategy using the software Biogeme ( Bierlaire, 2020 ) applying 1,000 MLHS draws ( Hess, Train, & Polak, 2006 ). The table is 
+structured such that model 1 shows the parameter estimates for all characteristics disregarding any sociodemographic groups. The 
+Table 2 
+Sample characteristics.  
+Characteristic Full sample Male Female Without Children With Children Up to 64 years old Over 64 years old 
+# Respondents 4,389 3,200 1,189 3,779 610 4,278 111 
+Age        
+Up to 17 years 0.5% 0.4% 0.5% 0.5% 0% 0.5% – 
+18 – 24 years 10.3% 11.7% 6.5% 11.9% 0.3% 10.6% – 
+25 – 34 years 31.9% 31.5% 33.2% 33.2% 24.3% 32.8% – 
+35 – 44 years 23.9% 24.3% 22.7% 19.1% 53.4% 24.5% – 
+45 – 54 years 20.9% 19.9% 23.6% 21.1% 19.5% 21.5% – 
+55 – 64 years 10% 9.4% 11.4% 11.2% 2.3% 10.2% – 
+65 and older 2.5% 2.7% 2.1% 2.9% 0.3% – 100% 
+Gender        
+Male 72.9% 100% – 73.8% 67.7% 72.8% 77.5% 
+Female 27.1% – 100% 26.3% 32.3% 27.2% 22.5% 
+Frequency        
+Daily 74.9% 74.9% 75.0% 74.5% 77.5% 75.3% 61.3% 
+1 to 3 days a week 18.7% 18.8% 18.2% 19.2% 15.3% 18.4% 29.7% 
+1 to 3 days a month 3.9% 3.6% 5.0% 3.8% 5.1% 4.0% 3.6% 
+Less than once a month 1.6% 1.8% 1.1% 1.6% 1.6% 1.5% 3.6% 
+Never or almost never 0.8% 0.8% 0.8% 0.9% 0.5% 0.8% 1.8% 
+No answer 0.1% 0.1% 0% 0.1% 0% 0.1% 0% 
+Cycling with children        
+Yes 13.9% 12.9% 16.6% – 100% 14.2% 1.8% 
+No 86.1% 87.1% 83.4% 100% – 85.8% 98.2%  
+M. Hardinghaus and J. Weschke                                                                                                                                                                                   Transportation Research Part D 111 (2022) 103465
+5
+following three models then present the results for the estimated parameters separated by either gender, cycling with children or age 
+group. However, when no significant difference at 5% level was found between the two groups, a joint parameter was estimated. The 
+performance of the models is good with rho square values around 0.3 and all parameter signs are as expected without imposing any 
+restrictions on parameters. Testing the model fit of models 2,3 and 4, which consider differences between sociodemographic groups, 
+against model 1 using the likelihood-ratio test, each of the models performs significantly better than model 1. In addition to the 
+variables included in the model, the table includes the reference variable of each group in italics , with no parameter estimates to report. 
+Generally, results show that preferences for some infrastructure characteristics vary between the different sociodemographic 
+groups and in such a way that the specific subgroups und considerations always show the higher preferences. However, not every 
+subgroup values each attribute higher than the average population. Most differences exist between those cycling with children and 
+Table 3 
+Estimation results.   
+Model 1 Model 2: Gender Model 3: Children Model 4: Age 
+Attribute Estimate (std. error) Estimate (std. error) Estimate (std. error) Estimate (std. error) 
+ASC 1 6.84 (0.252) 6.81 (0.244) 6.72 (0.24) 6.77 (0.241) 
+ASC 2 6.76 (0.252) 6.73 (0.244) 6.64 (0.24) 6.68 (0.241) 
+ASC 3 6.87 (0.252) 6.83 (0.244) 6.74 (0.24) 6.79 (0.241) 
+ASC 4 (no choice) reference reference reference reference 
+Travel time   0.244 (0.0042)    0.246 (0.0042)   0.245 (0.0042) 
+Travel time male    0.257 (0.00451)   
+Travel time female    0.211 (0.00603)   
+Bike lane 1.04 (0.0322) 1.05 (0.0322) 1.06 (0.0323) 1.04 (0.0322) 
+Bike path 1.31 (0.0352)   1.31 (0.0352) 
+Bike path male  1.25 (0.0371)   
+Bike path female  1.46 (0.0461)   
+Bike path w/ children   1.25 (0.0362)  
+Bike path w/o children   1.86 (0.0653)  
+Protected bike lane 2.18 (0.0358) 2.18 (0.0359)  2.18 (0.0359) 
+Protected bike lane w/ children   2.11 (0.0368)  
+Protected bike lane w/o children   2.81 (0.0638)  
+No infrastructure reference Reference reference reference 
+Living street 0.664 (0.0259)   0.664 (0.0259) 
+Living street male  0.611 (0.0282)   
+Living street female  0.822 (0.0408)   
+Living street w/ children   0.538 (0.0278)  
+Living street w/o children   1.45 (0.0705)  
+Cycle street 2.1 (0.0391) 2.1 (0.0392)  2.1 (0.0391) 
+Cycle street w/ children   2.03 (0.0411)  
+Cycle street w/o children   2.63 (0.0929)  
+Speed limit 30 km/h 0.414 (0.0164) 0.413 (0.164)   
+Speed limit 30 km/h w/ children   0.394 (0.0172)  
+Speed limit 30 km/h w/o children   0.588 (0.0417)  
+Speed limit 30 km/h up to 64y    0.407 (0.0165) 
+Speed limit 30 km/h over 64y    0.717 (0.0821) 
+Speed limit 50 km/h reference reference reference reference 
+Side street 0.68 (0.0327) 0.677 (0.0327)   
+Side street w/ children   0.672 (0.034)  
+Side street w/o children   0.855 (0.0744)  
+Side street up to 64y    0.674 (0.0328) 
+Side street over 64y    0.979 (0.102) 
+Main street reference reference reference reference 
+Asphalt 2.42 (0.0331) 2.43 (0.0331)  2.42 (0.0331) 
+Asphalt w/ children   2.46 (0.0353)  
+Asphalt w/o children   2.34 (0.073)  
+Cobblestone reference reference reference reference 
+On-street parking   0.681 (0.0139)   0.683 (0.0139)   0.686 (0.014)   0.682 (0.0139) 
+No parking reference reference reference reference 
+Trees 0.176 (0.0121)  0.18 (0.0121) 0.176 (0.0121) 
+Trees male  0.155 (0.014)   
+Trees female  0.236 (0.0227)   
+No trees reference reference reference reference 
+Sigma 1 0.142 (0.0547) 0.126 (0.0658) 0.102 (0.0971) 0.129 (0.0625) 
+Sigma 4 3.42 (0.15) 3.19 (0.145) 3.13 (0.143) 3.16 (0.14) 
+Respondents 4,389 4,389 4,389 4,389 
+Observations 35,112 35,112 35,112 35,112 
+Log Likelihood   34221.92   34150.32   34019   34086.37 
+Rho square 0.297 0.298 0.301 0.3 
+LR-Test  143.2 405.84 271.1  
+M. Hardinghaus and J. Weschke                                                                                                                                                                                   Transportation Research Part D 111 (2022) 103465
+6
+those without, while the subgroup of older participants only favor lower speed limits for cars and side streets more. Even when most of 
+the results seem highly plausible, there are some interesting details to note in the differences between males and females. First, females 
+prefer bike paths more than males, but this does not hold true for protected bike lanes, and second, females prefer living streets more 
+than males while this not the case for cycling streets. Since in both cases the infrastructure quality is in ascending order, one may 
+assume that differences in preference also exist for even higher quality infrastructure elements. In these cases, however, it seems that 
+male preferences are the same for the highest quality infrastructure attributes but significantly lower for medium quality attributes. 
+In the following, some preference comparisons between the groups studied will be pointed out. They always represent the relation 
+between the sociodemographic group under consideration and the outside group (e.g. cycling with children compared to cycling 
+without children). Bike paths are preferred more by females compared to males, and by respondents cycling with children compared to 
+those without. Protected bike lanes (bike lanes separated from motorized traffic by bollards) are favored 33% more among those 
+cycling with children. Preferences for living streets (comparable to shared spaces, cars are only allowed to drive at walking speed) 
+differ between gender and the factor of cycling with children. For the latter group, preferences for living streets are nearly tripled 
+compared to the others while preferences for cycle streets are 30% higher. A speed limit of 30 km/h for cars is especially preferred by 
+those cycling with children and older respondents, with 50% and 75% higher valuation, respectively. This is the same for side streets 
+with around 25% and 50%, respectively, higher preferences compared to the other group. Preferences for asphalt compared to cob -
+blestones are slightly higher for those without children than for those cycling with children. Preferences for on-street parking are the 
+same for all groups analyzed. The presence of trees along the route, however, is favored by females compared to males, with no 
+differences between the other two groups analyzed. 
+For a better interpretation of the differences in preferences for infrastructure attributes of the respondent groups, the marginal rate 
+of substitution between each attribute and travel time is calculated and presented in Table 4 . This means that the values in Table 4 
+represent the amount of travel time (in minutes) that respondents are willing to invest (on average) in order to obtain the respective 
+infrastructure attribute compared to the reference. For instance, the average population is willing to cycle up to nearly 9 min (8.93) 
+longer to have a protected bike lane on this route. For females, this attribute is worth more than 10 min of extra travel time and those 
+cycling with children are even willing to travel an extra 11.52 min, while those riding without children value the existence of a 
+protected bike lane at only an extra 8.65 min of travel time. In the comparison of valuations in terms of travel time, it is interesting to 
+note that the results of model 2 report a difference in parameter estimates for travel time between women and men, which is why the 
+value of attributes in terms of travel time differs for each attribute even when there is no difference in the parameter for the attribute 
+itself (e.g. bike lane). Due to the difference in parameter estimates, women are always willing to sacrifice more travel time in order to 
+cycle on better infrastructure than men. Differences in valuation of travel time between men and women seem to be in line with 
+previous literature findings on the value of travel time ( Schmid et al., 2019 ). A further advantage of standardizing the parameter values 
+by travel time is the improvement in comparing the valuation between different attributes. While trees are valued nearly twice as high 
+among females compared to males, the overall value is low, so the difference in travel time that they are willing to sacrifice for trees is 
+only half a minute which is much lower than e.g. the value of bike lanes or bike paths. 
+4. Discussion 
+The results presented in the four models as shown above are meaningful regarding different preferences among user groups and 
+show that different groups have different demands regarding bike infrastructure. The implications of the results and related recom -
+mendations and policy implications will be highlighted in this section. 
+Comparing the four models, several fundamental trends of different route preferences become obvious. First, all subgroups of 
+interest (women, people cycling with children, and older adults) show higher route requirements than the whole sample. Significantly 
+higher utilities are observed for different route characteristics. There is no case in which the subgroups show lower route requirements. 
+Table 4 
+Marginal rate of substitution between each attribute and travel time (in minutes).  
+Attribute All users Male Female With children Without children Up to 64 years old Over 64 years old 
+Bike lane 4.26 4.09 4.98 4.26 4.26 
+Bike path 5.37 4.86 6.92 5.12 7.62 5.37 
+Protected bike lane 8.93 8.48 10.33 8.65 11.52 8.93 
+No infrastructure        
+Living street 2.72 2.38 3.90 2.20 5.94 2.72 
+Cycle street 8.61 8.17 9.95 8.32 10.78 8.61 
+Speed limit 30 km/h 1.70 1.61 1.96 1.61 2.41 1.67 2.94 
+Speed limit 50 km/h        
+Side street 2.79 2.63 3.21 2.75 3.50 2.76 4.01 
+Main street        
+Asphalt 9.92 9.46 11.52 10.08 9.59 9.92 
+Cobblestone        
+On-street parking   2.79   2.66   3.24   2.79   2.79 
+No parking        
+Trees 0.71 0.60 1.12 0.71 0.71 
+No trees         
+M. Hardinghaus and J. Weschke                                                                                                                                                                                   Transportation Research Part D 111 (2022) 103465
+7
+That means in the trade-off between route characteristics and travel time, the subgroups of interest value the route characteristics 
+analyzed higher than the whole sample does. Second, people cycling with children value slower speeds of motorized transport much 
+higher than the entire population. Riding in a living street is 1.7 times more highly favored by people cycling with children than by 
+those cycling without. To a lesser extent, the preference for lower car speeds can be seen when looking at cycle streets and the speed 
+limit of 30 km/h compared to 50 km/h. The same holds true for side streets which are preferred to a larger extent over main streets. 
+Third, a similar tendency regarding the drawbacks of fast motorized transport is observed in respect of the group of older adults. They 
+value a speed for cars of 30 km/h compared to 50 km/h which is 45% higher than the younger group. For even slower speeds, however, 
+there are no significant differences. Fourth, separated bike-infrastructure (bike paths) is favored more by females than males and by 
+people cycling with children (bike path and protected bike lanes). There are almost no significant differences regarding the road 
+surface, trees along the road and parked cars, factors which can be understood as proxy for the comfort and attractiveness of the road. 
+Only female cyclists value trees along the road higher than males do. A slightly lower preference for a smooth surface within the group 
+of people cycling with children can be explained by generally having permission to cycle on the sidewalk when accompanying a bike- 
+riding child under ten years old. 
+Compared to earlier research, we find an even stronger preference for separated facilities among women. (Aldred et al., 2016; Vedel 
+et al., 2017; Winters & Teschke, 2010). This finding is in line with current research, indicating that an increase in cycling infrastructure 
+levels the gender balance of cyclists (AitBihiOuali & Klingen, 2022). The authors argue that safety is more important for women than 
+for men. In addition, Grudgings et al. (2021) find that the presence of cycle lanes is more relevant for the share of female cyclists than 
+for males (Grudgings, Hughes, & Hagen-Zanker, 2021). In the present research, however, this finding can only be supported for the 
+case of bike paths. For protected bike lanes, we do not find any significant differences. In relation to other trade-offs, the gender 
+variable is less strong. Hence, overall, we are in line with earlier research which concludes limited differences of route choice regarding 
+gender (Clark et al., 2019; Rowangould & Tayarani, 2016). Regarding the limited evidence of stronger preferences for separated 
+facilities among older people, the present study sees no significant differences (Aldred et al., 2016). Nevertheless, we provide evidence 
+of a stronger preference for side streets and lower speed limits. Recent qualitative research supports calm residential streets and 
+separated bicycle infrastructure as the preferred road environment for cyclists riding their bikes with children (Desjardins et al., 2021). 
+Earlier research suggested that older people had a higher preference for separated infrastructure (Aldred et al., 2016). With regard to 
+this, the present study observes higher route requirements for older cyclists, concluding a stronger preference for calm roads and lower 
+speed limits, but it cannot prove a greater desire for separated infrastructures. 
+The findings and their consideration in planning and practice are especially important, since older adults and children are 
+vulnerable groups that deserve special protection. Providing a bike-friendly city environment with lower speed zones also makes the 
+city more child-friendly. It allows for independent active mobility and therefore the social participation of minors. At the same time, 
+the socialization of mobility behavior is very important for children, since it influences their behavior over their whole lifetime 
+(Müggenburg, Busch-Geertsema, & Lanzendorf, 2015). Before being allowed to drive, children and teenagers show one of the highest 
+cycling rates across all age groups (Nobis, 2019). A strategy attracting children to cycle even more and ensuring a comfortable and safe 
+experience may therefore have long term effects on the mobility behavior of society. Regarding seniors, earlier research finds that they 
+are more likely to be involved in accidents when cycling (Rodgers, 1997). Furthermore, serious injuries occur more often when ac -
+cidents are sustained in older age (Dai & Dadashova, 2021; Yang, Yang, Smith, & Robert, 2021). These known higher risks for older 
+adults correspond to their preference for lower speed limits. A good cycle strategy should enable seniors to minimize their individual 
+risk by following their route preferences. Allowing older adults to cycle has a positive influence on their cognitive function and well- 
+being (Leyland et al., 2019). 
+Based on these findings, recommendations for planning and practice can be drawn. Most important finding of the present study is 
+that all subgroups under consideration show higher route requirements than the mean population. That does not imply that the 
+average population is not valuing proper bike infrastructure, but is less willing to give up travel time (i.e. taking a longer route) to ride 
+on better infrastructure. Consequently, there are no fundamental differences in what an attractive bike-infrastructure looks like. The 
+relevant bikeable road properties are just more important for the subgroups considered. This means that these groups benefit even 
+more than the majority from a bike-friendly adaptation of urban road infrastructure. As a result, slower car speeds are desired to some 
+extent by all subgroups considered. Hence, a strategy of lower speed limits, especially in the lower-level road network, would meet 
+these needs and should therefore be integrated into strategic cycle plans. 
+The limitations of the present study are discussed in the following. As the data collection approach relied mainly on social media 
+and networks, we expected a self-selective sample of people interested in cycling and corresponding policies. The sample is also 
+distorted in respect of sociodemographic variables as described in section 2. Although the sample size is very large for a choice 
+experiment, the group of older adults accounts for a small share of the whole sample. We do not consider this problematic because the 
+corresponding subsample is still large enough to identify significant differences. Finally, we can only evaluate road properties which 
+were included in the experiment. There may be other attributes or other sociodemographic distinguishing features which would better 
+explain the differences. 
+5. Conclusion 
+The specific needs of population groups who are less involved in planning processes are crucial when aiming for equity of supply 
+with bike infrastructure. Results show that the trade-offs between travel time and desired properties of the route differ greatly across 
+the subgroups of interest. It is seen that women, people cycling with children, and older adults have higher requirements regarding 
+bike infrastructure, and in particular place higher value on lower speeds of motorized traffic than middle-aged males. If an alternative 
+M. Hardinghaus and J. Weschke                                                                                                                                                                                   Transportation Research Part D 111 (2022) 103465
+8
+is available, these groups pay for their needs with longer detours and consequently accept longer travel times compared to the average 
+population. Strategies for a bike-friendly city should therefore contain concepts of lower speed limits and generally lower speeds in 
+cities. Results show that specific subgroups benefit more from a bike-friendly redesign than the population as a whole. This applies to 
+each of the user groups under consideration: women, people with children, and older adults. 
+Funding 
+The research was funded by the German Federal Ministry of Transport and Digital Infrastructure. 
+CRediT authorship contribution statement 
+Michael Hardinghaus: Conceptualization, Investigation, Resources, Writing – original draft, Project administration, Funding 
+acquisition. Jan Weschke: Writing – original draft, Data curation, Formal analysis, Methodology, Software. 
+Declaration of Competing Interest 
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to 
+influence the work reported in this paper. 
+Acknowledgement 
+We would like to thank Kerstin Stark, Rita Cyganski and Viktoriya Kolarova for comments on the manuscript. 
+References 
+AitBihiOuali, L., Klingen, J., 2022. Inclusive roads in NYC: Gender differences in responses to cycling infrastructure. Cities 127, 103719. https://doi.org/10.1016/j. 
+cities.2022.103719 . 
+Aldred, R., Elliott, B., Woodcock, J., Goodman, A., 2016. Cycling provision separated from motor traffic: a systematic review exploring whether stated preferences 
+vary by gender and age. Transp. Rev. 37 (1), 1 – 27. https://doi.org/10.1080/01441647.2016.1200156 . 
+Barratt, P., 2017. Healthy competition: A qualitative study investigating persuasive technologies and the gamification of cycling. Health & Place 46, 328 – 336. https:// 
+doi.org/10.1016/j.healthplace.2016.09.009 . 
+Bierlaire, M. (2020). A short introduction to PandasBiogeme . Retrieved from Lausanne, Switzerland. 
+Blair, S., 2009. Physical inactivity: the biggest public health problem of the 21st century. Br. J. Sports Med. 43 (1), 1 – 2 . 
+Bliemer, M., Rose, J., 2006. Designing Stated Choice Experiments: State-of-the-art. ETH Zürich, Zürich, Switzerland .  
+Braun, L.M., Rodriguez, D.A., Gordon-Larsen, P., 2019. Social (in)equity in access to cycling infrastructure: cross-sectional associations between bike lanes and area- 
+level sociodemographic characteristics in 22 large U.S. cities. J. Transp. Geogr. 80, 102544. https://doi.org/10.1016/j.jtrangeo.2019.102544 . 
+Broach, J., Dill, J., Gliebe, J., 2012. Where do cyclists ride? A route choice model developed with revealed preference GPS data. Transport. Res. A: Pol. Pract. 46 (10), 
+1730 – 1740. https://doi.org/10.1016/j.tra.2012.07.005 . 
+Buehler, R., Pucher, J., 2011. Cycling to work in 90 large American cities: new evidence on the role of bike paths and lanes. Transportation 39 (2), 409 – 432. https:// 
+doi.org/10.1007/s11116-011-9355-8 . 
+Burgess, G., 2008. Planning and the gender equality duty – why does gender matter? People Place Pol. online 2 (3), 112 – 121 . 
+Clark, C., Mokhtarian, P., Circella, G., Watkins, K., 2019. User Preferences for bicycle infrastructure in communities with emerging cycling cultures. Transp. Res. Rec. 
+2673 (12), 89 – 102. https://doi.org/10.1177/0361198119854084 . 
+Dai, B., Dadashova, B., 2021. Review of contextual elements affecting bicyclist safety. J. Transp. Health 20, 101013. https://doi.org/10.1016/j.jth.2021.101013 . 
+Desjardins, E., Apatu, E., Razavi, S.D., Higgins, C.D., Scott, D.M., P ´aez, A., 2021. “ Going through a little bit of growing pains ” : A qualitative study of the factors that 
+influence the route choice of regular bicyclists in a developing cycling city. Transport. Res. F: Traffic Psychol. Behav. 81, 431 – 444. https://doi.org/10.1016/j. 
+trf.2021.06.005 . 
+Ding, D., Lawson, K.D., Kolbe-Alexander, T.L., Finkelstein, E.A., Katzmarzyk, P.T., Van Mechelen, W., Pratt, M., 2016. The economic burden of physical inactivity: a 
+global analysis of major non-communicable diseases. The Lancet 388 (10051), 1311 – 1324. https://doi.org/10.1016/S0140-6736(16)30383-X . 
+Doran, A., El-Geneidy, A., Manaugh, K., 2021. The pursuit of cycling equity: a review of Canadian transport plans. J. Transp. Geogr. 90, 102927. https://doi.org/ 
+10.1016/j.jtrangeo.2020.102927 . 
+Flanagan, E., Lachapelle, U., El-Geneidy, A., 2016. Riding tandem: Does cycling infrastructure investment mirror gentrification and privilege in Portland, OR and 
+Chicago, IL? Res. Transport. Econ. 60, 14 – 24. https://doi.org/10.1016/j.retrec.2016.07.027 . 
+Forester, J., 1993. Effective cycling. MIT Press . 
+Garrard, J., Handy, S., Dill, J., 2012. Women and cycling. City cycling, 2012, 211-234. 
+Ghekiere, A., Van Cauwenberg, J., de Geus, B., Clarys, P., Cardon, G., Salmon, J., . . . Deforche, B. (2014). Critical environmental factors for transportation cycling in 
+children: a qualitative study using bike-along interviews. PLoS One, 9 (9), e106696. 
+Grudgings, N., Hughes, S., Hagen-Zanker, A., 2021. The comparison and interaction of age and gender effects on cycling mode-share: an analysis of commuting in 
+England and Wales. J. Transp. Health 20, 101004. https://doi.org/10.1016/j.jth.2020.101004 . 
+Hardinghaus, M., Nieland, S., 2021. Assessing cyclists ’ routing preferences by analyzing extensive user setting data from a bike-routing engine. Eur. Transp. Res. Rev. 
+13 (1), 1 – 19 . 
+Hardinghaus, M., Nieland, S., Lehne, M., Weschke, J., 2021. More than bike lanes — a multifactorial index of urban bikeability. Sustainability 13 (21), 11584 . 
+Hardinghaus, M., Papantoniou, P., 2020. Evaluating cyclists ’ route preferences with respect to infrastructure. Sustainability 12 (8), 3375. https://doi.org/10.3390/ 
+su12083375 . 
+Hess, S., Train, K.E., Polak, J.W., 2006. On the use of a modified Latin hypercube sampling (MLHS) method in the estimation of a mixed logit model for vehicle choice. 
+Transport. Res. B: Methodol. 40 (2), 147 – 163. https://doi.org/10.1016/j.trb.2004.10.005 . 
+Lanzendorf, M., Busch-Geertsema, A., 2014. The cycling boom in large German cities — Empirical evidence for successful cycling campaigns. Transp. Policy 36, 26 – 33. 
+https://doi.org/10.1016/j.tranpol.2014.07.003 . 
+Lee, I.M., Shiroma, E.J., Lobelo, F., Puska, P., Blair, S.N., Katzmarzyk, P.T., 2012. Effect of physical inactivity on major non-communicable diseases worldwide: an 
+analysis of burden of disease and life expectancy. The Lancet 380 (9838), 219 – 229. https://doi.org/10.1016/S0140-6736(12)61031-9 . 
+Leyland, L.-A., Spencer, B., Beale, N., Jones, T., Van Reekum, C.M., 2019. The effect of cycling on cognitive function and well-being in older adults. PLoS One 14 (2), 
+e0211779. https://doi.org/10.1371/journal.pone.0211779 . 
+M. Hardinghaus and J. Weschke                                                                                                                                                                                   Transportation Research Part D 111 (2022) 103465
+9
+Little, J. (1994). Gender, Planning, and the Policy Process : Citeseer. 
+Makarova, I., Mavrin, V., Magdin, K., Shubenkova, K., Boyko, A., 2019. Evaluation of Sustainability of the Transport System of Urbanized Areas Considering the 
+Development of Bicycle Transport. Transportation Science and Technology, Vilnius, Lithuania, Paper presented at the TRANSBALTICA XI .  
+McFadden, D., 1973. Conditional logit analysis of qualitative choice behavior. Academic Press, New York .  
+Mora, R., Truffello, R., Oyarzún, G., 2021. Equity and accessibility of cycling infrastructure: an analysis of Santiago de Chile. J. Transp. Geogr. 91, 102964. https:// 
+doi.org/10.1016/j.jtrangeo.2021.102964 . 
+Mueller, N., Rojas-Rueda, D., Cole-Hunter, T., de Nazelle, A., Dons, E., Gerike, R., G ¨otschi, T., Int Panis, L., Kahlmeier, S., Nieuwenhuijsen, M., 2015. Health impact 
+assessment of active transportation: a systematic review. Prev. Med. 76, 103 – 114. https://doi.org/10.1016/j.ypmed.2015.04.010 . 
+Mueller, N., Rojas-Rueda, D., Salmon, M., Martinez, D., Ambros, A., Brand, C., de Nazelle, A., Dons, E., Gaupp-Berghausen, M., Gerike, R., G ¨otschi, T., Iacorossi, F., Int 
+Panis, L., Kahlmeier, S., Raser, E., Nieuwenhuijsen, M., 2018. Health impact assessment of cycling network expansions in European cities. Prev. Med. 109, 62 – 70. 
+https://doi.org/10.1016/j.ypmed.2017.12.011 . 
+Müggenburg, H., Busch-Geertsema, A., Lanzendorf, M., 2015. Mobility biographies: a review of achievements and challenges of the mobility biographies approach 
+and a framework for further research. J. Transp. Geogr. 46, 151 – 163. https://doi.org/10.1016/j.jtrangeo.2015.06.004 . 
+Nobis, C., 2019. Mobilit ¨at in Deutschland – MiD Analysen zum Radverkehr und Fu ß verkehr. Retrieved from Bonn, Berlin. 
+Pritchard, R., 2018. Revealed preference methods for studying bicycle route choice — a systematic review. Int. J. Environ. Res. Public Health 15 (3), 470. https://doi. 
+org/10.3390/ijerph15030470 . 
+Rodgers, G.B., 1997. Factors associated with the crash risk of adult bicyclists. J. Saf. Res. 28 (4), 233 – 241. https://doi.org/10.1016/S0022-4375(97)00009-1 . 
+Rowangould, G.M., Tayarani, M., 2016. Effect of bicycle facilities on travel mode choice decisions. J. Urban Plann. Dev. 142 (4), 04016019. https://doi.org/10.1061/ 
+(ASCE)UP.1943-5444.0000341 . 
+Russell, M., Davies, C., Wild, K., Shaw, C., 2021. Pedalling towards equity: exploring women ’ s cycling in a New Zealand city. J. Transp. Geogr. 91, 102987. https:// 
+doi.org/10.1016/j.jtrangeo.2021.102987 . 
+Schmid, B., Jokubauskaite, S., Aschauer, F., Peer, S., H ¨ossinger, R., Gerike, R., Jara-Diaz, S.R., Axhausen, K.W., 2019. A pooled RP/SP mode, route and destination 
+choice model to investigate mode and user-type effects in the value of travel time savings. Transport. Res. A: Pol. Pract. 124, 262 – 294 . 
+Schultheiss, W., Sanders, R.L., Toole, J., 2018. A historical perspective on the AASHTO guide for the development of bicycle facilities and the impact of the vehicular 
+cycling movement. Transp. Res. Rec. 2672 (13), 38 – 49 . 
+Sheller, MIMI, 2015. Racialized mobility transitions in Philadelphia: connecting urban sustainability and transport justice. City Soc. 27 (1), 70 – 91. https://doi.org/ 
+10.1111/ciso.12049 . 
+Train, K.E., 2009. Discrete choice methods with simulation. Cambridge University Press . 
+Tucker, B., Manaugh, K., 2018. Bicycle equity in Brazil: Access to safe cycling routes across neighborhoods in Rio de Janeiro and Curitiba. Int. J. Sustain. Transport. 12 
+(1), 29 – 38. https://doi.org/10.1080/15568318.2017.1324585 . 
+Tummers, L., Wankiewicz, H., 2020. Gender mainstreaming planning cultures: Why & #x2018;engendering planning ’ needs critical feminist theory. Retrieved from 
+Gender 12 (1), 7 – 8. https://elibrary.utb.de/doi/abs/10.3224/gender.v12i1.02 . 
+Van Cauwenberg, J., Clarys, P., De Bourdeaudhuij, I., Ghekiere, A., de Geus, B., Owen, N., Deforche, B., 2018. Environmental influences on older adults ’ 
+transportation cycling experiences: A study using bike-along interviews. Landscape Urban Plann. 169, 37 – 46. https://doi.org/10.1016/j. 
+landurbplan.2017.08.003 . 
+Vedel, S.E., Jacobsen, J.B., Skov-Petersen, H., 2017. Bicyclists ’ preferences for route characteristics and crowding in Copenhagen – A choice experiment study of 
+commuters. Transport. Res. A: Pol. Pract. 100, 53 – 64. https://doi.org/10.1016/j.tra.2017.04.006 . 
+Winters, M., Teschke, K., 2010. Route preferences among adults in the near market for bicycling: findings of the cycling in cities study. Am. J. Health Promotion 25 
+(1), 40 – 47. https://doi.org/10.4278/ajhp.081006-QUAN-236 . 
+Winters, M., Teschke, K., Brauer, M., Fuller, D., 2016. Bike Score ® : Associations between urban bikeability and cycling behavior in 24 cities. Int. J. Behav. Nutrit. 
+Phys. Activity 13 (1), 1 – 10. https://doi.org/10.1186/s12966-016-0339-0 . 
+Yang, Z., Yang, Z., Smith, J., Robert, B.A.P., 2021. Risk analysis of bicycle accidents: A Bayesian approach. Reliab. Eng. Syst. Saf. 209, 107460. https://doi.org/ 
+10.1016/j.ress.2021.107460 . 
+M. Hardinghaus and J. Weschke                                                                                                                                                                                   

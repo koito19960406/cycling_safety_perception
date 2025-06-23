@@ -369,6 +369,7 @@ dependencies = [
     { name = "loguru" },
     { name = "matplotlib" },
     { name = "pandas" },
+    { name = "pypdf" },
     { name = "seaborn" },
     { name = "semopy" },
     { name = "tabulate" },
@@ -388,6 +389,7 @@ requires-dist = [
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "matplotlib", specifier = ">=3.10.3" },
     { name = "pandas", specifier = ">=2.2.3" },
+    { name = "pypdf", specifier = ">=5.6.1" },
     { name = "seaborn", specifier = ">=0.13.2" },
     { name = "semopy", specifier = ">=2.3.11" },
     { name = "tabulate", specifier = ">=0.9.0" },
@@ -1815,6 +1817,18 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/bb/22/f1129e69d94ffff626bdb5c835506b3a5b4f3d070f17ea295e12c2c6f60f/pyparsing-3.2.3.tar.gz", hash = "sha256:b9c13f1ab8b3b542f72e28f634bad4de758ab3ce4546e4301970ad6fa77c38be", size = 1088608, upload-time = "2025-03-25T05:01:28.114Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/05/e7/df2285f3d08fee213f2d041540fa4fc9ca6c2d44cf36d3a035bf2a8d2bcc/pyparsing-3.2.3-py3-none-any.whl", hash = "sha256:a749938e02d6fd0b59b356ca504a24982314bb090c383e3cf201c95ef7e2bfcf", size = 111120, upload-time = "2025-03-25T05:01:24.908Z" },
+]
+
+[[package]]
+name = "pypdf"
+version = "5.6.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/f7/8e/9d9346c36bb02fc6d6e5c5412dcc104e422738c3391ef32032bcb7fb183f/pypdf-5.6.1.tar.gz", hash = "sha256:dde36cd67afe3afd733a562a0dd08a3c1dcdf01fe01de13785291319c8a883ff", size = 5025128, upload-time = "2025-06-22T11:05:25.587Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c5/16/a5619a9d9bd4601126b95a9026eccfe4ebb74d725b7fdf624680e5a1f502/pypdf-5.6.1-py3-none-any.whl", hash = "sha256:ff09d03d37addbc40f75db3624997a660ff5fe41c61e7ae4db6828dc3f581e4d", size = 304638, upload-time = "2025-06-22T11:05:24.285Z" },
 ]
 
 [[package]]

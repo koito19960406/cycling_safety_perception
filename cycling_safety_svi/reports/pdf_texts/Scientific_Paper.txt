@@ -1,0 +1,606 @@
+Understanding cycling route choice behaviour through street-level
+images and computer vision-enriched discrete choice models
+R.W. Terraa,b, F. Garrido-Valenzuelaa,b, O. Catsb,c, S. van Cranenburgh a,b
+aTransport and Logistics group, Faculty of Technology Policy and Management, Delft University of Technology,
+The Netherlands
+bCityAI Lab, Delft University of Technology, The Netherlands
+cDepartment of Transport & Planning, Faculty of Civil Engineering and Geosciences, Delft University of Technology,
+The Netherlands
+Date issued: 12/12/2024
+Abstract
+This study investigates cyclists’ preferences for cycling environments, such as lane type, pavement type, and
+lane width. We conducted a stated route choice experiment where respondents evaluated alternatives varying in
+cycling environment, travel time and the number of traffic lights. Unlike previous studies, we used thousands
+of street-level images to represent the cycling environment, providing rich information on safety and quality
+that text or numbers cannot convey. We analysed the data using recently proposed computer vision-enriched
+discrete choice models, which integrate computer vision into traditional discrete choice models. Thereby, we can
+infer cyclist trade-offs and estimate willingness-to-pay values. Results show that cycling environments strongly
+influence route choice, with cyclists preferring green areas and separated cycling lanes. For an 11-minute trip,
+cyclists are willing to take a 1.5-minute detour for a separate lane instead of a mixed-traffic road. These findings
+offer insights for designing cycling environments that align with cyclists’ preferences.
+Keywords: discrete choice models, computer vision, street-level images, stated choice experiment, cycling route
+behaviour, cycling environment
+1 Introduction
+The Netherlands has a well-established culture of cycling (Harms et al., 2015). Numerous transport policies aim
+to promote cycling due to its significant contributions to health, accessibility, sustainability, and liveability (Dutch
+Cycling Embassy, 2018). Furthermore, cycling is widely regarded as a key solution for achieving the 2015 Paris Cli-
+mateAgreementtargets,includinga40%reductioninCO 2 emissionsby2030(EuropeanUnion,2023; I&W,2020).
+One way for governments to promote cycling is by providing cycling environments that align with cyclists’
+preferences. For instance, Fosgerau et al. (2023) find that a high-quality cycling environment pulls travellers out
+of their cars for short-distance trips. Guo et al. (2023) highlight that such environments improve perceived safety,
+and Costa, Azevedo, et al. (2024) find that they are associated with fewer cycling accidents. To effectively design
+good cycling environments, it is essential to understand cyclists’ route choice behaviour. This includes identifying
+which attributes influence their preferences and to what extent. In this study, the term cycling environment refers
+to the overall surroundings experienced by the cyclist, including infrastructure, the built environment, traffic and
+weather conditions.
+A substantial body of research has explored cyclists’ route choice behaviour using stated preference (SP)
+methods. These studies aim to quantify how various attributes influence cyclists’ route decisions by presenting
+respondents with hypothetical choice scenarios. While early work relied primarily on textual or numerical descrip-
+tions to represent the cycling environment (Bovy & Bradley, 1985; Liu et al., 2020; Majumdar & Mitra, 2018;
+Sener et al., 2009; Stinson & Bhat, 2003), more recent studies have incorporated visual elements, such as short
+image clips (Tilahun et al., 2007), sketch-based images (Hardinghaus & Papantoniou, 2020; Vedel et al., 2017),abstract images (Significance, 2022) and edited images (Rossetti et al., 2018; Tarkkala et al., 2024; Uijtdewilligen
+et al., 2024).
+In several studies the presence of bike infrastructure emerges as the most influential attribute on route choice
+(Hardinghaus & Papantoniou, 2020; Rossetti et al., 2018; Sener et al., 2009; Tarkkala et al., 2024; Tilahun
+et al., 2007; Vedel et al., 2017). Cyclists are frequently willing to trade longer travel time for routes with
+dedicated infrastructure. For example, the study by Vedel et al. (2017) that used sketches to represent the cycling
+environment found that commuters in Copenhagen were willing to cycle 1.84 km further for a designated cycling
+lane, and 0.8 km more for greener surroundings, based on a trip length of 5 km.
+In addition to infrastructure, travel time remains the dominant factor in several studies, especially those
+relying on textual descriptions (Bovy & Bradley, 1985; Stinson & Bhat, 2003). Traffic-related attributes such as car
+intensity (Bovy & Bradley, 1985; Majumdar & Mitra, 2018; Sener et al., 2009; Significance, 2022; Stinson & Bhat,
+2003; Tarkkala et al., 2024; Uijtdewilligen et al., 2024; Vedel et al., 2017), cyclist intensity (Uijtdewilligen et al.,
+2024; Vedel et al., 2017), and car speed limits (Hardinghaus & Papantoniou, 2020; Rossetti et al., 2018; Sener
+et al., 2009; Significance, 2022; Vedel et al., 2017) also negatively affect route preferences. Furthermore, the
+presence of turns, intersections, and traffic lights has been shown to negatively affect cyclists’ route preferences
+(Sener et al., 2009; Tarkkala et al., 2024; Uijtdewilligen et al., 2024; Vedel et al., 2017).
+Other relevant attributes include pavement type (Bovy & Bradley, 1985; Hardinghaus & Papantoniou, 2020;
+Significance, 2022; Stinson & Bhat, 2003), road width (Liu et al., 2020; Majumdar & Mitra, 2018; Rossetti et al.,
+2018), and road colouring (Rossetti et al., 2018). Environmental features such as greenery (Hardinghaus &
+Papantoniou, 2020; Liu et al., 2020; Vedel et al., 2017), surrounding buildings (Liu et al., 2020), car parking
+(Hardinghaus & Papantoniou, 2020; Sener et al., 2009) and the presence of street lighting (Liu et al., 2020;
+Majumdar & Mitra, 2018) have also been shown to influence cyclists’ preferences.
+While stated preference studies provide insights into cyclists’ hypothetical trade-offs, revealed preference (RP)
+research based on GPS or smartphone data captures actual behaviour. Several RP studies consistently highlight
+travel distance as the dominant factor in route choice decisions (Bernardi et al., 2018; Broach et al., 2012;
+Skov-Petersen et al., 2018; Ton et al., 2017). Ton et al. (2017), using GPS data from the inner-city of Amsterdam,
+showed that cyclists are insensitive to separate cycling lanes and predominantly prioritised minimising travel
+distance. In contrast, Skov-Petersen et al. (2018) found that cyclists in Copenhagen do respond to dedicated
+cycling infrastructure. These findings suggest that, although many studies report a positive relationship between
+cycling infrastructure and route choice, this relationship appears to be both method- and context-dependent.
+Despite the above-mentioned body of knowledge, the understanding of cyclists’ preferences for cycling en-
+vironments remains incomplete. This gap is partly due to the way these environments are presented in stated
+choice experiments. Many studies rely on textual descriptions to convey attributes of the environment, such as
+“the width of the bicycle path,” “amount of street greenery,” or general labels like “very safe” (Bovy & Bradley,
+1985; Liu et al., 2020; Majumdar & Mitra, 2018; Sener et al., 2009; Stinson & Bhat, 2003). Others studies
+incorporate visuals, such as sketches, abstract illustrations, or manually edited images (Hardinghaus & Papan-
+toniou, 2020; Rossetti et al., 2018; Significance, 2022; Tarkkala et al., 2024; Uijtdewilligen et al., 2024; Vedel
+et al., 2017). These studies typically involve a small set of images, with each respondent viewing the same se-
+lection. Whiletheseapproachesaimtorepresentthecyclingenvironment, theyarelimitedinthreeimportantways.
+First, simplified visuals and textual descriptions often cannot accurately represent the full complexity of
+real-world environments (Florio et al., 2023). While previous studies aim to represent key attributes like bike
+facilities or traffic, they omit important contextual details such as surface texture, vegetation, or the overall
+sense of safety and beauty. Moreover, even when these features are visible, they are often treated illustratively
+rather than systematically analysed (Hevia-Koch & Klinge Jacobsen, 2019). For instance, in Rossetti et al. (2018)
+and Tarkkala et al. (2024), elements such as trees appear in the images but are not incorporated as preference
+parameters.
+Second, using simplified visuals and text descriptions may leave respondents struggling to fully grasp the
+characteristics of the described cycling environment (Childers et al., 1985). Simplified visuals or text descriptions
+require respondents to mentally reconstruct the scenario, which can lead to misinterpretation (Pinker, 1988). As
+a result, the preference parameters estimated for the cycling environment from above mentioned SP experiments
+may be biased.
+Page 2 of 15Third, real-world cycling environments vary greatly in infrastructure layout, built environment and traffic
+conditions. When SP experiments rely on a small number of images, results can become highly sensitive to the
+specific images shown, thereby limiting the external validity and broader applicability of the findings (Hevia-Koch
+& Klinge Jacobsen, 2019).
+Unlike text descriptions or simplified visuals, large sets of street-level images are particularly effective at cap-
+turing the full diversity of cycling environments. Their realism enables respondents to assess cycling environments
+more intuitively, while the scale of such datasets allows for great variation across infrastructure types, traffic
+conditions, and built environments. Recent advances in computer vision have opened up new ways of handling
+and extracting information from images (Szeliski, 2010). Building on these developments, a growing body of
+literature has employed large datasets of street-level images to explore human perceptions of urban environments.
+A common approach involves presenting respondents with pairs of street view images and asking which one
+appears safer, more attractive, or more beautiful. The aggregated responses are then used to assign perceptual
+scores to the images included in the survey. These images serve as training data for machine learning models that
+predict perceptual scores for new, unrated street view images (Dubey et al., 2016). The resulting predictions
+are often mapped to visualise spatial patterns of urban perceptions (Rossetti et al., 2019). Additionally, some
+studies apply image segmentation techniques to quantify visual features (e.g., trees, sky, buildings), which are
+then used to explain human perceptions (Ma et al., 2021; Ramírez et al., 2021). Biljecki and Ito (2021) and
+Zhang et al. (2024) provides a comprehensive review of this literature. Within this stream, several studies have
+also examined cyclists’ perceptions of their environment using street-level imagery (Costa, Marques, et al., 2024;
+Ito & Biljecki, 2021; Zeng et al., 2024), while others have explored how visual features relate to cycling accidents
+(Costa, Azevedo, et al., 2024; Ye et al., 2024).
+But perceptions and preferences are distinct concepts. Perceptions are subjective interpretations of sensory
+stimuli, which may influence but do not necessarily determine individuals’ choices (Wade & Swanston, 2013). In
+contrast, preferences are grounded in the theory of choice behaviour (Lancaster, 1966; Luce, 1959; Samuelson,
+1938) and govern what people choose and how they make trade-offs. As yet, no cyclist route preference study has
+been conducted that uses street-level images to display the cycling environment.
+The recently proposed computer vision-enriched discrete choice model (CV-DCMs) of van Cranenburgh and
+Garrido-Valenzuela (2025) integrate computer vision into traditional discrete choice models to accommodate
+choice tasks involving numerical attributes and images. Because they are grounded in Random Utility Maximisa-
+tion (RUM) principles, they enable inferring cyclist trade-offs as well as willingness-to-pay estimates. However,
+since the computer vision component relies on a neural network, it does not yield interpretable parameters
+for visual features, making it difficult to quantitatively verify whether features, such as the presence of a trees,
+positively or negatively influence preferences. Also, trade-offs between visual features cannot be inferred. Another
+drawback is that the stated choice experiment in van Cranenburgh and Garrido-Valenzuela (2025) employed a
+random experimental design, as images lack numerical levels required for orthogonal or efficient designs. Random
+designs can generate dominant alternatives and result in less reliable parameter estimates due to higher standard
+errors and uncontrolled attribute correlations (Rose & Bliemer, 2009). They also do not guarantee sufficient
+variation across environments, potentially limiting the diversity of environments presented.
+This study addresses several key gaps in the existing literature. First, it conducts a cyclist route preference study
+that incorporates a large set of street-level images to represent the cycling environment. Second, it builds on recent
+developments in CV-DCM’s (van Cranenburgh & Garrido-Valenzuela, 2025), by improving the interpretability of
+the visual component through a comprehensive GIS data collection. Lastly, it employs an efficient experimental
+design, ensuring greater statistical reliability and sufficient variation in the presented environments.
+To conduct the study, we developed and administered a novel stated choice experiment in which respondents
+were presented with alternatives that varied in terms of the cycling environments (street-level images), travel time
+and the number of traffic lights. The survey incorporated images sourced from a cycling infrastructure database
+maintained by the municipality of Rotterdam, The Netherlands. To improve interpretability, we performed a
+GIS-based data collection process to identify environmental attributes visible in each image. We then analysed
+our stated choice data using the CV-DCM framework. Finally, we applied our estimated model to gain insights
+into the spatial distribution of the cycling environment, using Rotterdam as the case study.
+The remainder of this paper is organised as follows. Section 2 introduces our data collection effort, including
+the design of the stated choice experiment. Section 3 presents the methodology and revisits the CV-DCMs. Section
+4 presents the training/estimation results and the model application to our case study: the cycling environment in
+Page 3 of 15the municipality of Rotterdam. Finally, Section 5 provides a conclusion and discusses avenues for further research.
+2 Data collection
+This section outlines the process of data collection in two parts. First the cycling environment data collection in
+Section 2.1 details the collection and categorisation of street-level images and the associated cycling environment
+data. Section 2.2 outlines the generation of the stated choice experiment, detailing the attributes included, the
+underlying design, and respondent sampling. To provide a comprehensive overview, Figure 1 illustrates the
+workflow.
+Figure 1: Methodology of the data collection
+2.1 Cycling environment data collection
+Our data collection process started with collecting street-level images of the cycling infrastructure. We obtained
+our images from the database of cycling infrastructure images of the municipality of Rotterdam (Cyclomedia,
+2023). To extract a subset of relevant images, we merged their locations onto the cycling network of Fietsersbond
+(2020). Specifically, for each street segment, the nearest street-level image within a 4-metre radius was retrieved,
+resulting in approximately 13k panorama images for further processing. These panorama images were then
+converted to 90-degree forward-facing images aligned with the cycling direction.
+Next, we analysed and categorised images according to cycling infrastructure, built environment, and vehicle
+speed. The decision was taken to categorise the images according to the 15 most common categories. This analysis
+provided the basis for selecting images for the stated choice experiment. Table 1 shows the attributes and their
+corresponding levels.
+Page 4 of 15Table 1: Attributes and corresponding levels
+Cycling Infrastructure Built Environment Speed Limit
+Solitary cycling lane Recreational area Not applicable
+Separated cycling lane Residential area 30 km/h
+Normal road Neighbourhood access 50 km/h
+Cycling suggestion lane Main road
+Industrial area
+In addition, we merged the image data with cycling environment data, including: built environment features,
+such as trees and buildings; Cycling infrastructure features, such as pavement type and lane width; and Traffic
+and environment features, such as car speed, weather and lightning. Street-level image captures times enabled
+matching with weather data of Visual Crossing (2024). Table 2 lists the attributes and their data sources. Merging
+these environmental features enabled us to design the stated choice experiment in such a way that meaningful
+trade-offs were observed. Note that for merging, different distance thresholds were used for different features.
+For example, buildings and water were assigned if present within 20m of the image, while for attributes like
+grass, plants, parking, and trams, a 10m buffer was used. Trees were counted along the segment. The final
+image database contains approximately 13k images, with fifteen categories based on combinations of the Cycling
+Infrastructure, the Speed Limit, and the Built Environment.
+Table 2: Collected attributes and their linking method
+Attribute Levels Source Linking method
+Built Environment
+Trees Count BGT Count within 20m buffer
+Grass Yes/No BGT Present within 10m
+Plants Yes/No BGT Present within 10m
+Water Yes/No BGT Present within 20m
+Buildings Yes/No BGT Present within 20m
+Industrial buildings Yes/No BGT Present within 20m
+Cycling Infrastructure
+Infrastructure type Categories Fietsersbond Initial network
+Pavement type Asphalt/Clinkers Fietsersbond Initial network
+Parking Yes/No BGT Present within 10m
+Width Metres BGT Present within 10m
+Colour Red/Not red BGT Present within 10m
+Tram Yes/No BGT Present within 10m
+Traffic and Environment
+Car speed 30/50 km/h Rijkswaterstaat Present within 10m
+Weather Sunny/Cloudy Visual Crossing Matched with image timestamp
+Lighting Brightness score Calculated Computed from image
+2.2 Stated choice data collection (SC)
+2.2.1 Selected attributes and ranges
+In our stated choice experiment, respondents were presented with a route choice. Based on the literature of
+Bernardi_LaPaix-Puello_Geurs_2018; OdedCats; Verhoeven et al. (2018), expert input, and their relevance to
+cycling decisions and policy, we conceptualised the cycling route alternatives using three attributes: the cycling
+environment (represented using a street-level image), the travel time and the number of traffic lights. We used 8,
+11, and 14 minutes for the travel time, representing realistic durations for urban cycling trips; for traffic lights, we
+used 1, 2, and 3.
+2.2.2 Efficient design
+An efficient design was chosen to maximise the information obtained from a stated choice experiment, resulting
+in more reliable parameter estimates for a given number of observations (Rose & Bliemer, 2009). Priors for the
+Page 5 of 15model parameters were based on findings from Significance (Significance, 2022), as shown in Table 3. The design
+was created using Ngene software (ChoiceMetrics, 2024), generating 30 choice tasks. In the experiment, images
+were randomly sampled from the image database based on their category. Furthermore, to manage cognitive load,
+each respondent was presented with 15 choice situations. The question order and the position of alternatives
+(left/right) were randomised.
+Table 3: Prior beta parameters. Adapted from Significance (2022)
+Parameter Beta Value Cycling Infrastructure Speed Limit Built Environment
+b_time -0.2707
+b_trafficlights -0.1330
+b_img.dummy[0] -1.002 Normal road 50 Access road
+b_img.dummy[1] -0.921 Normal road 50 Industrial
+b_img.dummy[2] -0.850 Normal road 50 Residential
+b_img.dummy[3] -0.720 Cycling suggestion lane 50 Access road
+b_img.dummy[4] -0.663 Normal road 30 Industrial
+b_img.dummy[5] -0.582 Normal road 30 Main road
+b_img.dummy[6] -0.512 Normal road 30 Access road
+b_img.dummy[7] -0.471 Cycling suggestion lane 30 Access road
+b_img.dummy[8] -0.466 Normal road 30 Residential
+b_img.dummy[9] -0.390 Separated cycling lane N/A Main road
+b_img.dummy[10] -0.319 Separated cycling lane N/A Access road
+b_img.dummy[11] -0.273 Separated cycling lane N/A Residential
+b_img.dummy[12] -0.116 Solitary cycling lane N/A Main road
+b_img.dummy[13] -0.046 Solitary cycling lane N/A Residential
+b_img.dummy[14] 0 Solitary cycling lane N/A Recreational
+2.2.3 Survey design
+The survey was developed using Plotly (2024). The survey comprised three parts: 1) a Stated choice experiment;
+2) Perception questions involving the rating images on traffic safety, social safety, and aesthetics; and 3) Questions
+about socio-demographic characteristics and cycling behaviour. The survey can be accessed at: http://cycling-
+route-survey.tbm.tudelft.nl/.
+Figure 2 shows an example of a choice task from the experiment. Respondents were given the following
+instructions:
+• Imagine you are cycling from your work, train station, school, or daily activity to your home.
+• There are two cycling routes you can take.
+• The routes differ only intravel time, the number oftraffic lights, and thecycling environmentshown in
+the photo.
+• In all other aspects, such as the weather, the cycling routes are the same.
+• Which route would you choose?
+• You can assume the following:
+– You are cycling alone.
+– You are not in a hurry.
+– The photo gives a good idea of what theentire routelooks like.
+– The travel time is thetotal timefor the route,including waiting at traffic lights.
+– The weather is partly cloudy with no rain.
+Page 6 of 15Figure 2: Example of a choice situation
+2.2.4 Survey implementation
+The survey was conducted between the end of September and the beginning of October 2024. Respondents
+were recruited through the panel company Cint (2024). The respondents were financially compensated and
+were individuals aged 18 years and above who engaged in cycling. To ensure that the sample was by and large
+representative of the Dutch population, entrance to the survey was controlled based on gender, age, and region
+through the data of CBS (2024). In total, 753 valid surveys have been collected. Regarding the images, a total of
+6,484 unique images were used.
+3 Methodology
+3.1 Computer vision-enriched discrete choice models
+In this study, we employ Computer Vision-enriched Discrete Choice Models (CV-DCMs) to estimate cyclists’ route
+choice preferences (van Cranenburgh & Garrido-Valenzuela, 2025). CV-DCMs are grounded in Random Utility
+Theory (RUT) McFadden (1974), which assumes individuals select the maximum utility alternative. Furthermore,
+it assumes utility is composed of an observed part and an unobserved part from the researcher’s perspective.
+Equation 1 shows the utility function of the linear-additive model, wherei denotes the alternative andm denotes
+the attribute. Under the assumption thatε is i.i.d. Extreme Value distributed, the choice probabilities attain the
+well-known logit formula (2).
+Uin =
+X
+m
+βm · ximn
+| {z }
+Vin
++εin (1)
+Pin = eVin
+P
+j eVjn
+(2)
+CV-DCMs combine traditional numerical attributes and information encoded in image data into the RUM-based
+discrete choice modelling framework, as shown in Figure 3. Images are represented as three-dimensional tensors,
+with pixels containing RGB colour channels. But, raw pixels cannot be used directly in the model. CV-DCMs use a
+feature extractor —typically a deep neural network— to extract the salient features from the image. These, in
+turn, are mapped linearly onto utility. Our application uses a Data Efficient Image Transformer (DeiT), a vision
+transformer, as the feature extractor (ImageNet, 2024; Touvron et al., 2021). This model produces a feature map
+of size 1 x 1000. Equation 3 shows its utility function.
+Uin =
+X
+m
+βm · ximn
+| {z }
+Utility from numerical attributes
++
+X
+k
+βk · zikn
+| {z }
+Utility from image features
++εin (3)
+Page 7 of 15Figure 3: Model structure of the CV-DCM.
+Adopted from van Cranenburgh and Garrido-Valenzuela, 2025
+3.2 Training
+3.2.1 Cross-entropy loss function
+To train the CV-DCM, we use a cross-entropy loss function. Minimising the cross-entropy is equivalent to
+maximising the (log-)likelihood of the data. Furthermore, our loss function also includes an L2 regularisation
+term to prevent overfitting from happening. The loss function is shown in Equation 4, whereβ are the marginal
+utilities associated with the numerical attributes, andw are weights of the computer vision part of the model.
+w, β= arg min
+w,β
+
+
+1
+N
+NX
+n=1
+JX
+j=1
+ynj log(Pnj|Xnj, Sjn, β)
+| {z }
+Cross-entropy loss
++ γ
+RX
+r=1
+w2
+r
+| {z }
+L2 regularisation
+
+
+(4)
+3.2.2 Training and hyperparameter tuning
+We implemented and trained the CV-DCM using PyTorch. PyTorch is designed to train deep neural networks
+and facilitate GPU support, accelerating training. We set the hyperparameters to the optimal values found by
+(van Cranenburgh & Garrido-Valenzuela, 2025), which are reported in Table 4.
+Table 4: Hyperparameters CV-DCM training
+Hyperparameter Value
+Optimisation algorithm Stochastic Gradient Descent
+Learning Rate 1 × 10−5
+Batch Size 5
+L2 weight decay (γ) 0.1
+Page 8 of 154 Results
+4.1 Training and estimation results
+Besides the CV-DCM (Model 1), we estimated two traditional discrete choice models for comparison. Model 2 is a
+linear-additive RUM-MNL model, which uses the travel time and the number of traffic lights as attributes only.
+Hence, this model ignores the presented images. Therefore, we expect this model’s model fit to be lower than
+that of the CV-DCM. Model 3 extends Model 2 by also using cycling environment attributes of the place of the
+street-level image, which were merged onto data (see section 2.1). Table 5 reports the training and estimation
+results.
+Table 5: Training and estimation results
+Model 1 Model 2 Model 3
+Model type CV-DCM RUM-MNL RUM-MNL
+Number of parameters 86m 2 15
+Estimation time 1.5 hour <1 sec <1 sec
+Train Set (N = 9,135)
+Log-Likelihood -5,656 -6,157 -5,704
+Rho-squared 0.109 0.028 0.099
+Cross-entropy 0.617 0.674 0.624
+BIC - 12,332 11,208
+Test Set (N = 2,128)
+Log-Likelihood -1,326 -1,421 -1,339
+Rho-squared 0.101 0.036 0.092
+Cross-entropy 0.623 0.668 0.629
+BIC - 2,857 2,793
+est s.e. p-val est s.e. p-val est s.e. p-val
+Parameters
+βtt -0.10 -0.11 0.012 0.00 -0.23 0.0139 0.00
+βtl -0.24 -0.23 0.021 0.00 -0.31 0.0215 0.00
+βnormalroad 0.00 Fixed Fixed
+βsuggestionlane -0.05 0.054 0.37
+βseparatedlane 0.36 0.054 0.00
+βklinkers -0.11 0.041 0.01
+βsunny 0.09 0.033 0.01
+βbrightness 0.04 0.008 0.00
+βtrees 0.10 0.015 0.00
+βwater 0.18 0.038 0.00
+βhouse -0.31 0.049 0.00
+βindustrial -0.63 0.059 0.00
+βgras 0.24 0.038 0.00
+βparking -0.09 0.039 0.02
+βtram -0.23 0.107 0.03
+βplants 0.03 0.037 0.45
+WTP traffic light [min] 2.38 2.12 0.2522 0.00 1.38 0.1034 0.00
+We can make the following observations based on Table 5. Firstly, the Rho-square indicates that the CV-DCM
+model (Model 1) explains a reasonable amount of the variance in the choice data. In contrast, Model 2, which
+ignores the information encoded in the images, attains a very low model fit. From this comparison, we can infer
+that the computer vision part of the CV-DCM extracts meaningful information from the images to explain the route
+choice behaviour in the data. Similar to traditional DCMs, theβ coefficients of the CV-DCM represent marginal
+utilities and can be used to calculate Willingness-to-Pay (WTP) estimates. Specifically, the WTP to reduce one
+traffic light can be determined by taking the ratio of the coefficients,βtl/βtt. Based on the CV-DCM, the WTP
+to eliminate a traffic light from the cycling route is estimated to be 2.38 minutes. Finally, examining Model 3,
+we observe that it achieves a significantly better fit than Model 2, though it still falls short of the CV-DCM. This
+Page 9 of 15suggests that environmental features and the images share overlapping information. For example, the presence of
+a building along the cycling route can be detected both in the street-level image and through data extracted from
+a GIS database. Although it does not attain an as good fit as the CV-DCM, it provides more explanations because
+the betas associated with the cycling environment features are interpretable. In particular, Model 3 reveals that
+cyclists strongly prefer separated cycling lanes over normal roads. Specifically, the findings indicate that cyclists
+are willing to extend an 11-minute trip by 1.5 minutes to use a separate cycling lane rather than a mixed-traffic
+road. Similarly, natural features such as trees, water, and grass are significantly more appreciated than normal
+roads, whereas industrial areas, parking spaces, and trams are less favoured by cyclists.
+4.2 Model application in Rotterdam
+To investigate the spatial distribution of the attractiveness of the cycling environment in Rotterdam, we applied
+our trained CV-DCM model to 13k images taken across Rotterdam’s cycling network. For each image, the CV-DCM
+predicts a utility level, which can be conceived as a measure of the cycling environment’s attractiveness. Figures
+4a and 4b show the results. In Figure 4a, the results are aggregated at the street-segment level, whereas in Figure
+4b, the results are first aggregated at the neighbourhood level and subsequently grouped into five clusters using
+Jenks natural breaks (J. Chen et al., 2013). The legends display the corresponding colourmaps, but it is important
+to note that utility values do not have an absolute reference level (Train, 2009). Consequently, the mean utility is
+not zero-centred. Instead, the mean utility level is -0.46 in Figures 4a and 4b. Both figures highlight a noticeable
+pattern: the cycling environment tends to be relatively poor in the city centre but improves considerably in the
+periphery.
+(a) Utility levels, aggregated at street segments
+ (b) Utility levels, aggregated at neighbourhood level
+Figure 4: Spatial distribution of utility derived from the cycling environment
+4.2.1 Explaining cycling environment utility levels
+A drawback of the CV-DCM is that its computer vision part is opaque (van Cranenburgh & Garrido-Valenzuela,
+2024). However, one can look at the most extreme predictions to elucidate what it has learned. Specifically,
+looking at the images that produce the lowest and highest utility levels provides insights into the factors the
+model uses for its predictions. Accordingly, Figure 5 shows nine random images from the highest and lowest
+utility score clusters used to produce Figure 4b. We observe that the highest utility levels are associated with
+separated cycling lanes, greenery and few buildings or traffic. In contrast, the lowest utility levels are associated
+with images of urban areas with buildings, vehicles, and shared narrow roads. This pattern aligns with prior
+findings that cyclists prefer routes with greenery and separated lanes (ROSSETTI2018252; P. Chen et al., 2018).
+Page 10 of 15(a) Images sampled from cluster 1
+ (b) Images sampled from cluster 5
+Figure 5: Images with the highest (left) and lowest (right) utility levels
+To further elucidate what the CV-DCM has learned about cyclists’ preferences for cycling infrastructure, we
+grouped the images based on the type of lanes and the maximum car speed on the road. Figure 6 shows the
+results in a boxplot, in which the columns are sorted from lowest mean utility to highest mean utility. Figure 6
+indicates that ordinary roads are the least preferred option, followed by cycling suggestion lanes. Interestingly,
+the maximum car speed (30 km/h or 50 km/h) appears to have little influence, possibly because participants did
+not infer speed from the images. Separated and solitary cycling lanes are the most preferred lanes.
+Figure 6: Utility scores by cycling infrastructure and Car speed
+We grouped the images on the built environment categories, also used to create the stated choice experiment.
+Figure 7 shows that recreational areas, characterised by separated cycling lanes and greenery, are most preferred
+by cyclists. Main roads and neighbourhood access roads follow, while residential and industrial areas score
+similarly, with industrial areas slightly lower. Dense buildings and clinker roads likely reduce the appeal of
+residential areas.
+Page 11 of 15Figure 7: Utility scores by cycling infrastructure and Car speed
+While this analysis highlights valuable insights, the correlation between cycling infrastructure and the built
+environment presents a challenge. For instance, recreational areas often feature solitary cycling lanes surrounded
+by greenery. This overlap complicates interpretation, as utility scores may reflect the combined appeal of
+infrastructure and environment rather than isolating their individual impact.
+5 Conclusions and discussion
+This paper investigated cyclists’ preferences for cycling environments, such as lane type, pavement type, and
+greenery. To do so, we conducted a novel stated cycling route choice experiment in which respondents were
+presented alternatives that varied in terms of the cycling environment, travel time and the number of traffic lights.
+In contrast to previous studies, we used street-level images to represent the cycling environment. For the stated
+choice experiment, over 6k were used. We analysed our choice data using recently proposed model computer
+vision-enriched discrete choice models, which integrate computer vision into traditional discrete choice models
+and compared the results with traditional discrete choice models. Our results show that the cycling environment
+is an influential factor in cyclists’ route choice behaviour. Specifically, we find strong support for the notion that
+cyclists prefer separated cycling lanes. Specifically, we find that cyclists are willing to detour 1.5 minutes to cycle
+on a separate lane instead of a mixed-traffic road for an 11-minute trip.
+While the use of real-world images in stated choice experiments offers significant advantages, it also raises
+important questions. For example, it is plausible that the visual representation of the cycling environment
+disproportionately captures attention, potentially diverting focus from numerically presented attributes (e.g.,
+travel time and traffic lights in our study) and ultimately leading to biased estimates. Future research could
+investigate this hypothesis through an A/B testing framework. Moreover, although images greatly enhance
+respondents’ understanding of the choice context compared to text and numerical descriptions alone, the presented
+scenarios may still deviate from real-world conditions. In our case, single images are used to represent entire
+routes, whereas in reality, the cycling environment can vary significantly along the route. Future studies could
+address this limitation by incorporating a series of images or videos to provide a more realistic representation of
+the choice situation. Finally, while the parameters of the CV-DCM associated with numerical attributes retain
+their interpretability, the weights derived from the computer vision model component lack transparency. Future
+research could explore model structures that enhance the interpretability of the computer vision component.
+References
+Bernardi, S., La Paix-Puello, L., & Geurs, K. (2018). Modelling route choice of dutch cyclists using smartphone
+data. Journal of Transport and Land Use, 11(1). https://doi.org/10.5198/jtlu.2018.1143
+Biljecki, F., & Ito, K. (2021). Street view imagery in urban analytics and gis: A review.Landscape and Urban
+Planning, 215, 104217. https://doi.org/https://doi.org/10.1016/j.landurbplan.2021.104217
+Bovy, P. H. L., & Bradley, M. A. (1985). Route choice analyzed with stated-preference approaches.Transportation
+Research Record, (1037), 11–20. https://onlinepubs.trb.org/Onlinepubs/trr/1985/1037/1037-002.pdf
+Broach, J., Dill, J., & Gliebe, J. (2012). Where do cyclists ride? a route choice model developed with revealed
+preference gps data.Transportation Research Part A: Policy and Practice, 46(10), 1730–1740. https:
+//doi.org/https://doi.org/10.1016/j.tra.2012.07.005
+Page 12 of 15CBS. (2024). Cbs. https://opendata.cbs.nl/statline/#/CBS/nl/
+Chen, J., Yang, S. T., Li, H. W., Zhang, B., & Lv, J. R. (2013). Research on geographical environment unit division
+based on the method of natural breaks (jenks).The International Archives of the Photogrammetry, Remote
+Sensing and Spatial Information Sciences, XL-4/W3, 47–50. https://doi.org/10.5194/isprsarchives-XL-4-
+W3-47-2013
+Chen, P., Shen, Q., & Childress, S. (2018). A gps data-based analysis of built environment influences on bicyclist
+route preferences.International Journal of Sustainable Transportation, 12(3), 218–231. https://doi.org/
+10.1080/15568318.2017.1349222
+Childers,T.L.,Houston,M.J.,&Heckler,S.E.(1985).Measurementofindividualdifferencesinvisualversusverbal
+information processing.Journal of Consumer Research, 12(2), 125–134. https://doi.org/10.1086/208501
+ChoiceMetrics. (2024). Ngene. https://choice-metrics.com/download.html
+Cint. (2024). Cint. https://www.cint.com/
+Costa, M., Azevedo, C. L., Siebert, F. W., Marques, M., & Moura, F. (2024). Unraveling the relation between
+cycling accidents and built environment typologies: Capturing spatial heterogeneity through a latent
+class discrete outcome model.Accident Analysis & Prevention, 200, 107533.
+Costa, M., Marques, M., Azevedo, C. L., Siebert, F. W., & Moura, F. (2024). Which cycling environment appears
+safer?learningcyclingsafetyperceptionsfrompairwiseimagecomparisons. arXivpreprintarXiv:2412.09835 .
+Cyclomedia. (2023). Panoramafoto’s rotterdam actueel. https://www.gis.rotterdam.nl/gisweb2/default.aspx
+Dubey, A., Naik, N., Parikh, D., Raskar, R., & Hidalgo, C. A. (2016). Deep learning the city: Quantifying urban
+perception at a global scale. In B. Leibe, J. Matas, N. Sebe, & M. Welling (Eds.),Computer vision – eccv
+2016 (pp. 196–212). Springer International Publishing.
+Dutch Cycling Embassy. (2018). Dutch cycling vision. https://dutchcycling.nl/wp-content/uploads/2022/05/
+Dutch_Cycling_Vision_EN.pdf
+European Union. (2023). The importance of active mobility in the face of climate change. https://www.euroclima.
+org/en/recent-events-urban/articles-and-interviews/1981-world-bike-day-the-importance-of-active-
+mobility-in-the-face-of-climate-change
+Fietsersbond. (2020). Data fietsersbond. https://www.fietsersbond.nl/
+Florio, P., Leduc, T., Sutter, Y., & Brémond, R. (2023). Visual complexity of urban streetscapes: Human vs computer
+vision. Machine Vision and Applications, 35(1), 7. https://doi.org/10.1007/s00138-023-01484-1
+Fosgerau, M., Łukawska, M., Paulsen, M., & Rasmussen, T. K. (2023). Bikeability and the induced demand for
+cycling. Proceedings of the National Academy of Sciences, 120(16). https://doi.org/10.1073/pnas.
+2220515120
+Guo, X., Tavakoli, A., Angulo, A., Robartes, E., Chen, T. D., & Heydarian, A. (2023). Psycho-physiological measures
+on a bicycle simulator in immersive virtual environments: How protected/curbside bike lanes may
+improve perceived safety.Transportation Research Part F: Traffic Psychology and Behaviour, 92, 317–336.
+https://doi.org/10.1016/j.trf.2022.11.015
+Hardinghaus, M., & Papantoniou, P. (2020). Evaluating cyclists’ route preferences with respect to infrastructure.
+Sustainability, 12(8). https://doi.org/10.3390/su12083375
+Harms, L., Bertolini, L., & te Brömmelstroet, M. (2015). The dutch cycling culture: Policy ambitions and effects.
+International Journal of Behavioral Nutrition and Physical Activity, 12(1), 1–5. https://doi.org/10.1186/
+s12966-015-0209-5
+Hevia-Koch, P., & Klinge Jacobsen, H. (2019). Comparing offshore and onshore wind development considering
+acceptance costs.Energy Policy, 125, 9–19. https://doi.org/https://doi.org/10.1016/j.enpol.2018.10.019
+ImageNet. (2024). Imagenet. https://image-net.org/index.php
+Ito, K., & Biljecki, F. (2021). Assessing bikeability with street view imagery and computer vision.Transportation
+Research Part C: Emerging Technologies, 132, 103371. https://doi.org/https://doi.org/10.1016/j.trc.
+2021.103371
+I&W. (2020). Klimaatbeleid. https://www.rijksoverheid.nl/onderwerpen/klimaatverandering/klimaatbeleid
+Lancaster, K. J. (1966). A new approach to consumer theory.Journal of Political Economy, 74(2), 132–157.
+https://doi.org/10.1086/259131
+Liu, Y., Yang, D., Timmermans, H. J., & de Vries, B. (2020). Analysis of the impact of street-scale built environment
+design near metro stations on pedestrian and cyclist road segment choice: A stated choice experiment.
+Journal of transport geography, 82, 102570.
+Luce, R. D. (1959).Individual choice behavior: A theoretical analysis. Wiley.
+Ma, X., Ma, C., Wu, C., Xi, Y., Yang, R., Peng, N., Zhang, C., & Ren, F. (2021). Measuring human perceptions of
+streetscapes to better inform urban renewal: A perspective of scene semantic parsing.Cities, 110, 103086.
+https://doi.org/https://doi.org/10.1016/j.cities.2020.103086
+Page 13 of 15Majumdar, B. B., & Mitra, S. (2018). Analysis of bicycle route-related improvement strategies for two indian cities
+using a stated preference survey.Transport Policy, 63, 176–188. https://doi.org/https://doi.org/10.
+1016/j.tranpol.2017.12.016
+McFadden, D. (1974). The measurement of urban travel demand.Journal of Public Economics, 3(4), 303–328.
+https://doi.org/https://doi.org/10.1016/0047-2727(74)90003-6
+Pinker, S. (Ed.). (1988).Visual cognition. MIT Press. https://archive.org/details/visualcognition00pink
+Plotly. (2024). Data apps for production. https://plotly.com/
+Ramírez, T., Hurtubia, R., Lobel, H., & Rossetti, T. (2021). Measuring heterogeneous perception of urban space
+with massive data and machine learning: An application to safety.Landscape and Urban Planning, 208,
+104002. https://doi.org/https://doi.org/10.1016/j.landurbplan.2020.104002
+Rose, J. M., & Bliemer, M. C. J. (2009). Constructing efficient stated choice experimental designs.Transport
+Reviews, 29(5), 587–617. https://doi.org/10.1080/01441640902827623
+Rossetti, T., Guevara, A., Galilea, P., & Hurtubia, R. (2018). Modeling safety as a perceptual latent variable to
+assess cycling infrastructure.Transportation Research Part A: Policy and Practice, 111, 252–265. https:
+//doi.org/https://doi.org/10.1016/j.tra.2018.03.019
+Rossetti, T., Lobel, H., Rocco, V., & Hurtubia, R. (2019). Explaining subjective perceptions of public spaces as a
+function of the built environment: A massive data approach.Landscape and Urban Planning, 181, 169–178.
+https://doi.org/https://doi.org/10.1016/j.landurbplan.2018.09.020
+Samuelson, P. A. (1938). A note on the pure theory of consumer’s behaviour.Economica, 5(17), 61–71. https:
+//doi.org/10.2307/2548836
+Sener, I., Eluru, N., & Bhat, C. (2009). An analysis of bicycle route choice preferences in texas, us.Transportation,
+36, 511–539. https://doi.org/10.1007/s11116-009-9201-4
+Significance. (2022). Values of time, reliability and comfort in the netherlands 2022. https://english.kimnet.
+nl/publications/publications/2024/04/03/new-values-of-travel-time-reliability-and-comfort-in-the-
+netherlands
+Skov-Petersen, H., Barkow, B., Lundhede, T., & and, J. B. J. (2018). How do cyclists make their way? - a gps-based
+revealed preference study in copenhagen.International Journal of Geographical Information Science, 32(7),
+1469–1484. https://doi.org/10.1080/13658816.2018.1436713
+Stinson, M. A., & Bhat, C. R. (2003). Commuter bicyclist route choice: Analysis using a stated preference survey.
+Transportation Research Record, 1828(1), 107–115. https://doi.org/10.3141/1828-13
+Szeliski, R. (2010).Computer vision: Algorithms and applications. Springer London. https://books.google.nl/
+books?id=bXzAlkODwa8C
+Tarkkala, K., Vosough, S., West, J., & Roncoli, C. (2024). Evaluating the influence of cyclists’ route choices
+incorporation into travel demand modelling: A case study in greater helsinki.Transportation Research
+Interdisciplinary Perspectives, 27, 101224. https://doi.org/https://doi.org/10.1016/j.trip.2024.101224
+Tilahun, N. Y., Levinson, D. M., & Krizek, K. J. (2007). Trails, lanes, or traffic: Valuing bicycle facilities with an
+adaptive stated preference survey.Transportation Research Part A: Policy and Practice, 41(4), 287–301.
+https://doi.org/https://doi.org/10.1016/j.tra.2006.09.007
+Ton, D., Cats, O., Duives, D., & Hoogendoorn, S. (2017). How do people cycle in amsterdam? estimating cyclists’
+route choice determinants using gps data from an urban area.Transportation Research Record: Journal of
+the Transportation Research Board, 2662, 1–10. https://doi.org/10.3141/2662-09
+Touvron, H., Cord, M., Douze, M., Massa, F., Sablayrolles, A., & Jégou, H. (2021). Training data-efficient image
+transformers distillation through attention. https://arxiv.org/abs/2012.12877
+Train, K. E. (2009).Discrete choice methods with simulation. Cambridge university press.
+Uijtdewilligen, T., Baran Ulak, M., Jan Wijlhuizen, G., & Geurs, K. T. (2024). Effects of crowding on route
+preferences and perceived safety of urban cyclists in the netherlands.Transportation Research Part A:
+Policy and Practice, 183, 104030. https://doi.org/https://doi.org/10.1016/j.tra.2024.104030
+van Cranenburgh, S., & Garrido-Valenzuela, F. (2024). A utility-based spatial analysis of residential street-level
+conditions; a case study of rotterdam.arXiv preprint arXiv:2410.17880.
+van Cranenburgh, S., & Garrido-Valenzuela, F. (2025). Computer vision-enriched discrete choice models, with an
+application to residential location choice.Transportation Research Part A: Policy and Practice, 192, 104300.
+Vedel, S. E., Jacobsen, J. B., & Skov-Petersen, H. (2017). Bicyclists’ preferences for route characteristics and
+crowding in copenhagen – a choice experiment study of commuters.Transportation Research Part A: Policy
+and Practice, 100, 53–64. https://doi.org/https://doi.org/10.1016/j.tra.2017.04.006
+Verhoeven,H.,VanHecke,L.,&Dyck,V.(2018).Differencesinphysicalenvironmentalcharacteristicsbetweenado-
+lescents’ actual and shortest cycling routes: A study using a google street view-based audit.International
+Journal of Health Geographics, 17. https://doi.org/https://doi.org/10.1186/s12942-018-0136-x
+Visual Crossing. (2024). Weather data. https://www.visualcrossing.com/
+Page 14 of 15Wade, N. J., & Swanston, M. (2013).Visual perception: An introduction(3rd). Psychology Press. https://www.
+taylorfrancis.com/books/mono/10.4324/9780203082263/visual-perception-nicholas-wade-mike-
+swanston
+Ye, Y., Zhong, C., & Suel, E. (2024). Unpacking the perceived cycling safety of road environment using street view
+imagery and cycle accident data.Accident Analysis & Prevention, 205, 107677.
+Zeng, Q., Gong, Z., Wu, S., Zhuang, C., & Li, S. (2024). Measuring cyclists’ subjective perceptions of the street
+riding environment using k-means smote-rf model and street view imagery.International Journal of
+Applied Earth Observation and Geoinformation, 128, 103739. https://doi.org/https://doi.org/10.1016/j.
+jag.2024.103739
+Zhang, F., Salazar-Miranda, A., Duarte, F., Vale, L., Hack, G., Chen, M., Liu, Y., Batty, M., & Ratti, C. (2024).
+Urban visual intelligence: Studying cities with artificial intelligence and street-level imagery.Annals of
+the American Association of Geographers, 114(5), 876–897.
+Page 15 of 15

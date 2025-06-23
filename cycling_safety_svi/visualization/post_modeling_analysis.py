@@ -42,9 +42,18 @@ class PostModelingAnalyzer:
         self.safety_scores_path = 'data/processed/predicted_danish/cycling_safety_scores.csv'
         self.pixel_ratios_path = 'data/processed/segmentation_results/pixel_ratios.csv'
         self.scaled_images_dir = '/srv/shared/bicycle_project_roos/images_scaled/'
+        self.gradcam_overlays_dir = Path('data/processed/gradcam_visualizations/overlays/')
         
         # Load all data
         self.load_data()
+        
+        # Check for Grad-CAM data
+        self.has_gradcam_data = self.gradcam_overlays_dir.exists()
+        if not self.has_gradcam_data:
+            print(f"Warning: Grad-CAM overlay directory not found at {self.gradcam_overlays_dir}")
+            print("Figures 7 and 8 will not include Grad-CAM images.")
+        else:
+            print(f"✓ Found Grad-CAM overlays at: {self.gradcam_overlays_dir}")
         
     def load_data(self):
         """Load and prepare comparison data and additional datasets"""
@@ -177,7 +186,7 @@ class PostModelingAnalyzer:
             # Remove extension and add _blend.png
             base_name = Path(image_name).stem
             blend_name = f"{base_name}_blend.png"
-            blend_path = Path(self.scaled_images_dir) / blend_name
+            blend_path = Path("data/processed/segmented_images") / blend_name
             
             if blend_path.exists():
                 try:
@@ -210,141 +219,165 @@ class PostModelingAnalyzer:
         print(f"Warning: Image not found: {image_name}")
         return None
     
+    def load_gradcam_overlay(self, image_name, target_size=(120, 120)):
+        """
+        Load a Grad-CAM overlay image.
+        """
+        overlay_name = f"overlay_{image_name}"
+        overlay_path = Path(self.gradcam_overlays_dir) / overlay_name
+        
+        if overlay_path.exists():
+            try:
+                img = Image.open(overlay_path).convert('RGB')
+                img = img.resize(target_size, Image.Resampling.LANCZOS)
+                return img
+            except Exception as e:
+                print(f"Warning: Could not load Grad-CAM overlay {overlay_name}: {e}")
+                return None
+        
+        return None
+    
     def create_figure_1(self):
         """
-        Figure 1: Top 5 images with biggest gaps where stepwise_best > stepwise_w/o_safety
+        Figure 1: Combined comparison of top 5 images where models differ most
+        Left side: stepwise_best > stepwise_w/o_safety
+        Right side: stepwise_w/o_safety > stepwise_best
         """
-        print("Creating Figure 1: Best > Best w/o Safety")
+        print("Creating Figure 1: Combined Model Comparison")
         
         # Get unique image utilities
         unique_utilities = self.get_unique_image_utilities()
         
-        # Filter for positive percentile differences (stepwise_best > stepwise_wo_safety)
+        # Filter for positive and negative percentile differences
         positive_diffs = unique_utilities[unique_utilities['percentile_diff'] > 0]
+        negative_diffs = unique_utilities[unique_utilities['percentile_diff'] < 0]
         
-        # Get top 5
-        top_5 = positive_diffs.nlargest(5, 'percentile_diff')
+        # Get top 5 for each case
+        top_5_positive = positive_diffs.nlargest(5, 'percentile_diff')
+        top_5_negative = negative_diffs.nsmallest(5, 'percentile_diff')
         
-        # Create figure with image and combined bar plot
-        fig, axes = plt.subplots(5, 2, figsize=(16, 20))
-        fig.suptitle('Top 5 Images: Best > Best w/o Safety\n(Percentile Differences)', 
-                     fontsize=22, fontweight='bold', y=0.98)
+        # Create figure with 5 rows and 4 columns (2 images + 2 bar plots per row)
+        fig, axes = plt.subplots(5, 4, figsize=(20, 28), gridspec_kw={'width_ratios': [3, 2, 3, 2]})
+        fig.suptitle('Model Comparison: Images with Largest Utility Differences\n' + 
+                     'Left: Higher with Safety Model | Right: Higher without Safety Model', 
+                     fontsize=22, fontweight='bold', y=0.96)
         
-        for i, (_, row) in enumerate(top_5.iterrows()):
-            # Load image
-            img = self.load_and_resize_image(row['image_name'])
-            
-            # Display image
-            if img is not None:
-                axes[i, 0].imshow(img)
+        # Column headers
+        axes[0, 0].text(0.5, 1.1, 'HIGHER WITH SAFETY MODEL', 
+                       transform=axes[0, 0].transAxes, ha='center', va='bottom',
+                       fontsize=18, fontweight='bold', color='darkgreen')
+        axes[0, 1].text(0.5, 1.1, 'Percentile Comparison', 
+                       transform=axes[0, 1].transAxes, ha='center', va='bottom',
+                       fontsize=18, fontweight='bold', color='darkgreen')
+        axes[0, 2].text(0.5, 1.1, 'HIGHER WITHOUT SAFETY MODEL', 
+                       transform=axes[0, 2].transAxes, ha='center', va='bottom',
+                       fontsize=18, fontweight='bold', color='darkred')
+        axes[0, 3].text(0.5, 1.1, 'Percentile Comparison', 
+                       transform=axes[0, 3].transAxes, ha='center', va='bottom',
+                       fontsize=18, fontweight='bold', color='darkred')
+        
+        for i in range(5):
+            # Left side: Positive differences (safety model performs better)
+            if i < len(top_5_positive):
+                row_pos = top_5_positive.iloc[i]
+                
+                # Load and display image
+                img = self.load_and_resize_image(row_pos['image_name'], target_size=(240, 160))
+                if img is not None:
+                    axes[i, 0].imshow(img)
+                else:
+                    axes[i, 0].text(0.5, 0.5, "Image not found", 
+                                   ha='center', va='center', transform=axes[i, 0].transAxes, fontsize=14)
+                
+                axes[i, 0].axis('off')
+                
+                # Bar plot for positive case
+                models = ['With Safety', 'Without Safety']
+                percentiles = [row_pos['percentile_stepwise_best'], row_pos['percentile_stepwise_wo_safety']]
+                colors = ['darkgreen', 'lightgray']
+                
+                bars = axes[i, 1].bar(models, percentiles, color=colors, alpha=0.8)
+                axes[i, 1].set_ylabel('Percentile', fontsize=14)
+                axes[i, 1].tick_params(axis='x', labelsize=12, rotation=45)
+                axes[i, 1].tick_params(axis='y', labelsize=12)
+                axes[i, 1].grid(True, alpha=0.3)
+                axes[i, 1].set_ylim(0, 100)
+                
+                # Add value labels on bars
+                for bar, percentile in zip(bars, percentiles):
+                    height = bar.get_height()
+                    axes[i, 1].text(bar.get_x() + bar.get_width()/2., height + 1,
+                                   f'{percentile:.1f}%', ha='center', va='bottom', fontsize=12, fontweight='bold')
+                
+                # Add difference annotation
+                diff = row_pos['percentile_diff']
+                axes[i, 1].text(0.5, 0.95, f"+{diff:.1f}%", 
+                               transform=axes[i, 1].transAxes, ha='center', va='top',
+                               fontsize=14, fontweight='bold',
+                               bbox=dict(boxstyle="round,pad=0.3", facecolor='lightgreen', alpha=0.8))
             else:
-                axes[i, 0].text(0.5, 0.5, "Image not found", 
-                               ha='center', va='center', transform=axes[i, 0].transAxes, fontsize=16)
-            
-            axes[i, 0].axis('off')
-            
-            # Combined bar plot using percentiles
-            models = ['Best', 'Best w/o Safety']
-            percentiles = [row['percentile_stepwise_best'], row['percentile_stepwise_wo_safety']]
-            colors = ['red', 'gray']
-            
-            bars = axes[i, 1].bar(models, percentiles, color=colors, alpha=0.8)
-            axes[i, 1].set_ylabel('Percentile', fontsize=16)
-            axes[i, 1].tick_params(axis='x', labelsize=14)
-            axes[i, 1].tick_params(axis='y', labelsize=14)
-            axes[i, 1].grid(True, alpha=0.3)
-            axes[i, 1].set_ylim(0, 100)
-            
-            # Add value labels on bars
-            for bar, percentile in zip(bars, percentiles):
-                height = bar.get_height()
-                axes[i, 1].text(bar.get_x() + bar.get_width()/2., height + 1,
-                               f'{percentile:.1f}%', ha='center', va='bottom', fontsize=14, fontweight='bold')
-            
-            # Add difference annotation
-            diff = row['percentile_diff']
-            axes[i, 1].text(0.5, 0.95, f"Difference: +{diff:.1f}%", 
-                           transform=axes[i, 1].transAxes, ha='center', va='top',
-                           fontsize=16, fontweight='bold',
-                           bbox=dict(boxstyle="round,pad=0.3", facecolor='lightgreen', alpha=0.8))
+                axes[i, 0].axis('off')
+                axes[i, 1].axis('off')
+                
+            # Right side: Negative differences (without safety model performs better)
+            if i < len(top_5_negative):
+                row_neg = top_5_negative.iloc[i]
+                
+                # Load and display image
+                img = self.load_and_resize_image(row_neg['image_name'], target_size=(240, 160))
+                if img is not None:
+                    axes[i, 2].imshow(img)
+                else:
+                    axes[i, 2].text(0.5, 0.5, "Image not found", 
+                                   ha='center', va='center', transform=axes[i, 2].transAxes, fontsize=14)
+                
+                axes[i, 2].axis('off')
+                
+                # Bar plot for negative case
+                models = ['With Safety', 'Without Safety']
+                percentiles = [row_neg['percentile_stepwise_best'], row_neg['percentile_stepwise_wo_safety']]
+                colors = ['lightgray', 'darkred']
+                
+                bars = axes[i, 3].bar(models, percentiles, color=colors, alpha=0.8)
+                axes[i, 3].set_ylabel('Percentile', fontsize=14)
+                axes[i, 3].tick_params(axis='x', labelsize=12, rotation=45)
+                axes[i, 3].tick_params(axis='y', labelsize=12)
+                axes[i, 3].grid(True, alpha=0.3)
+                axes[i, 3].set_ylim(0, 100)
+                
+                # Add value labels on bars
+                for bar, percentile in zip(bars, percentiles):
+                    height = bar.get_height()
+                    axes[i, 3].text(bar.get_x() + bar.get_width()/2., height + 1,
+                                   f'{percentile:.1f}%', ha='center', va='bottom', fontsize=12, fontweight='bold')
+                
+                # Add difference annotation
+                diff = row_neg['percentile_diff']
+                axes[i, 3].text(0.5, 0.95, f"{diff:.1f}%", 
+                               transform=axes[i, 3].transAxes, ha='center', va='top',
+                               fontsize=14, fontweight='bold',
+                               bbox=dict(boxstyle="round,pad=0.3", facecolor='lightcoral', alpha=0.8))
+            else:
+                axes[i, 2].axis('off')
+                axes[i, 3].axis('off')
         
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
         
         # Save figure
-        fig_path = self.output_dir / 'figure_1_stepwise_best_greater.png'
+        fig_path = self.output_dir / 'figure_1_combined_model_comparison.png'
         plt.savefig(fig_path, dpi=300, bbox_inches='tight')
         print(f"Figure 1 saved to: {fig_path}")
         plt.close()
         
-        return top_5
+        return {'top_5_positive': top_5_positive, 'top_5_negative': top_5_negative}
     
     def create_figure_2(self):
         """
-        Figure 2: Top 5 images with biggest gaps where stepwise_w/o_safety > stepwise_best
+        Figure 2: Placeholder - merged into Figure 1
+        This method is kept for backward compatibility but does nothing
         """
-        print("Creating Figure 2: Best w/o Safety > Best")
-        
-        # Get unique image utilities
-        unique_utilities = self.get_unique_image_utilities()
-        
-        # Filter for negative percentile differences (stepwise_wo_safety > stepwise_best)
-        negative_diffs = unique_utilities[unique_utilities['percentile_diff'] < 0]
-        
-        # Get top 5 (most negative = largest positive difference in favor of wo_safety)
-        top_5 = negative_diffs.nsmallest(5, 'percentile_diff')
-        
-        # Create figure with image and combined bar plot
-        fig, axes = plt.subplots(5, 2, figsize=(16, 20))
-        fig.suptitle('Top 5 Images: Best w/o Safety > Best\n(Percentile Differences)', 
-                     fontsize=22, fontweight='bold', y=0.98)
-        
-        for i, (_, row) in enumerate(top_5.iterrows()):
-            # Load image
-            img = self.load_and_resize_image(row['image_name'])
-            
-            # Display image
-            if img is not None:
-                axes[i, 0].imshow(img)
-            else:
-                axes[i, 0].text(0.5, 0.5, "Image not found", 
-                               ha='center', va='center', transform=axes[i, 0].transAxes, fontsize=16)
-            
-            axes[i, 0].axis('off')
-            
-            # Combined bar plot using percentiles
-            models = ['Best', 'Best w/o Safety']
-            percentiles = [row['percentile_stepwise_best'], row['percentile_stepwise_wo_safety']]
-            colors = ['red', 'gray']
-            
-            bars = axes[i, 1].bar(models, percentiles, color=colors, alpha=0.8)
-            axes[i, 1].set_ylabel('Percentile', fontsize=16)
-            axes[i, 1].tick_params(axis='x', labelsize=14)
-            axes[i, 1].tick_params(axis='y', labelsize=14)
-            axes[i, 1].grid(True, alpha=0.3)
-            axes[i, 1].set_ylim(0, 100)
-            
-            # Add value labels on bars
-            for bar, percentile in zip(bars, percentiles):
-                height = bar.get_height()
-                axes[i, 1].text(bar.get_x() + bar.get_width()/2., height + 1,
-                               f'{percentile:.1f}%', ha='center', va='bottom', fontsize=14, fontweight='bold')
-            
-            # Add difference annotation (show as negative for wo_safety advantage)
-            diff = row['percentile_diff']
-            axes[i, 1].text(0.5, 0.95, f"Difference: {diff:.1f}%", 
-                           transform=axes[i, 1].transAxes, ha='center', va='top',
-                           fontsize=16, fontweight='bold',
-                           bbox=dict(boxstyle="round,pad=0.3", facecolor='lightcoral', alpha=0.8))
-        
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        
-        # Save figure
-        fig_path = self.output_dir / 'figure_2_stepwise_wo_safety_greater.png'
-        plt.savefig(fig_path, dpi=300, bbox_inches='tight')
-        print(f"Figure 2 saved to: {fig_path}")
-        plt.close()
-        
-        return top_5
+        print("Figure 2 has been merged into Figure 1")
+        return None
     
     def create_figure_3(self):
         """
@@ -372,9 +405,9 @@ class PostModelingAnalyzer:
         top_5_improvements = wrong_wo_safety_correct_best.nlargest(5, 'prob_improvement')
         
         # Create figure with 5 rows and 4 columns
-        fig, axes = plt.subplots(5, 4, figsize=(20, 24))
-        fig.suptitle('Top 5 Image Pairs: Wrong Choice with Best w/o Safety, Correct with Best\n(Probability Improvements)', 
-                     fontsize=20, fontweight='bold', y=0.98)
+        fig, axes = plt.subplots(5, 4, figsize=(20, 28), gridspec_kw={'width_ratios': [3, 2, 3, 2]})
+        fig.suptitle('Top 5 Image Pairs: Wrong Choice without Percevied Safety, Correct with Perceived Safety\n(Probability Improvements)', 
+                     fontsize=20, fontweight='bold', y=0.96)
         
         for i, (_, row) in enumerate(top_5_improvements.iterrows()):
             chosen_img = row['IMG1'] if row['CHOICE'] == 1 else row['IMG2']
@@ -389,7 +422,7 @@ class PostModelingAnalyzer:
             prob_not_chosen_stepwise_wo_safety = 1 - prob_chosen_stepwise_wo_safety
             
             # Column 1: Chosen image with probabilities
-            img_chosen = self.load_and_resize_image(chosen_img)
+            img_chosen = self.load_and_resize_image(chosen_img, target_size=(250, 200))
             if img_chosen is not None:
                 axes[i, 0].imshow(img_chosen)
             else:
@@ -399,16 +432,8 @@ class PostModelingAnalyzer:
             axes[i, 0].set_title(f"CHOSEN", fontsize=16, color='green', fontweight='bold')
             axes[i, 0].axis('off')
             
-            # Add text box below chosen image
-            prob_improvement = row['prob_improvement']
-            axes[i, 0].text(0.5, -0.1, 
-                           f"Probability Improvement:\n{prob_improvement:.3f}\n\nBest w/o Safety: WRONG\nBest: CORRECT", 
-                           transform=axes[i, 0].transAxes, ha='center', va='top',
-                           fontsize=14, fontweight='bold',
-                           bbox=dict(boxstyle="round,pad=0.5", facecolor='lightgreen', alpha=0.8))
-            
             # Column 2: Probabilities for chosen image
-            model_names = ['Best', 'Best w/o Safety']
+            model_names = ['With Safety', 'Without Safety']
             probs_chosen = [prob_chosen_stepwise_best, prob_chosen_stepwise_wo_safety]
             colors = ['red', 'gray']
             
@@ -427,7 +452,7 @@ class PostModelingAnalyzer:
                                f'{prob:.3f}', ha='center', va='bottom', fontsize=13, fontweight='bold')
             
             # Column 3: Not chosen image with probabilities
-            img_not_chosen = self.load_and_resize_image(not_chosen_img)
+            img_not_chosen = self.load_and_resize_image(not_chosen_img, target_size=(250, 200))
             if img_not_chosen is not None:
                 axes[i, 2].imshow(img_not_chosen)
             else:
@@ -553,10 +578,13 @@ class PostModelingAnalyzer:
             print("Warning: Cannot create Figure 5 - missing safety scores or design data")
             return None
         
-        # Translation dictionary for land use types
+        # Translation dictionary for land use types (expanded to match Figure 8)
         buildenvironment_translation = {
-            'Industrieterrein': 'Industrial',
-            'Woongebied': 'Residential'
+            'Hoofdweg': 'Main road',
+            'Industriet': 'Industrial',
+            'Recreatie': 'Recreation',
+            'Woongebied': 'Residential',
+            'Wijkontslu': 'Access road',
         }
         
         # Merge safety scores with design data
@@ -572,7 +600,7 @@ class PostModelingAnalyzer:
         all_design = pd.concat([img1_design, img2_design], ignore_index=True)
         all_design = all_design.drop_duplicates(subset='image_name', keep='first')
         
-        # Translate buildenvironment to English
+        # Translate buildenvironment to English (apply translation as in Figure 8)
         all_design['buildenvironment_en'] = all_design['buildenvironment'].map(buildenvironment_translation).fillna(all_design['buildenvironment'])
         
         # Ensure image_name is string type in both datasets
@@ -621,7 +649,8 @@ class PostModelingAnalyzer:
     
     def create_figure_6(self):
         """
-        Figure 6: Scatter plots between predicted safety scores, utilities, Car, Terrain, Bike Lane, Road, Vegetation
+        Figure 6: Scatter plots between predicted safety scores, utilities, Car, Terrain, Bike Lane, Road, Vegetation.
+        Also saves the correlation matrix to a text file.
         """
         print("Creating Figure 6: Scatter Plot Matrix")
         
@@ -658,6 +687,16 @@ class PostModelingAnalyzer:
         if len(available_vars) < 2:
             print(f"Warning: Not enough variables available for scatter plots. Available: {available_vars}")
             return None
+        
+        # Compute correlation matrix for the selected variables
+        corr_matrix = merged_data[available_vars].corr()
+        
+        # Save correlation matrix to a text file
+        corr_txt_path = self.output_dir / 'figure_6_correlation_matrix.txt'
+        with open(corr_txt_path, 'w') as f:
+            f.write("Correlation matrix for Figure 6 variables:\n")
+            f.write(corr_matrix.to_string(float_format="%.3f"))
+        print(f"Correlation matrix saved to: {corr_txt_path}")
         
         # Create scatter plot matrix
         n_vars = len(available_vars)
@@ -746,82 +785,25 @@ class PostModelingAnalyzer:
         # Get unique wegtypes and sort by safety scores within each
         unique_wegtypes = sorted(merged_data['wegtype_en'].unique())
         n_wegtypes = len(unique_wegtypes)
-        n_cols = 5
         
-        # Create figure with one extra column for labels
-        fig, axes = plt.subplots(n_wegtypes, n_cols + 1, figsize=(18, 3*n_wegtypes))
-        if n_wegtypes == 1:
-            axes = axes.reshape(1, -1)
-        
-        fig.suptitle('Image Grid: Representative Samples by Safety Score Quantiles within Road Types', fontsize=20, fontweight='bold', y=0.98)
-        
-        for row, wegtype in enumerate(unique_wegtypes):
-            wegtype_data = merged_data[merged_data['wegtype_en'] == wegtype].sort_values('safety_score')
-            
-            # First column: wegtype label
-            axes[row, 0].text(0.5, 0.5, wegtype, ha='center', va='center', 
-                             transform=axes[row, 0].transAxes, fontsize=16, fontweight='bold', rotation=0)
-            axes[row, 0].axis('off')
-            
-            # Divide into quantiles and sample randomly from each
-            if len(wegtype_data) >= n_cols:
-                quantiles = np.linspace(0, 1, n_cols + 1)
-                for col in range(n_cols):
-                    q_start = quantiles[col]
-                    q_end = quantiles[col + 1]
-                    start_idx = int(q_start * len(wegtype_data))
-                    end_idx = int(q_end * len(wegtype_data))
-                    if end_idx == start_idx:
-                        end_idx = start_idx + 1
-                    quantile_data = wegtype_data.iloc[start_idx:end_idx]
-                    
-                    if len(quantile_data) > 0:
-                        # Randomly sample one image from this quantile
-                        sampled_row = quantile_data.sample(n=1).iloc[0]
-                        img_name = sampled_row['image_name']
-                        safety_score = sampled_row['safety_score']
-                        
-                        # Load image (use segmented blend version)
-                        img = self.load_and_resize_image(img_name, target_size=(120, 120), use_segmented=True)
-                        
-                        if img is not None:
-                            axes[row, col + 1].imshow(img)
-                        else:
-                            axes[row, col + 1].text(0.5, 0.5, 'Not found', ha='center', va='center', 
-                                                  transform=axes[row, col + 1].transAxes, fontsize=12)
-                        
-                        axes[row, col + 1].set_title(f'{safety_score:.3f}', fontsize=12, fontweight='bold')
-                        axes[row, col + 1].axis('off')
-                    else:
-                        axes[row, col + 1].axis('off')
-            else:
-                # If not enough data, just show available images
-                for col in range(n_cols):
-                    if col < len(wegtype_data):
-                        img_name = wegtype_data.iloc[col]['image_name']
-                        safety_score = wegtype_data.iloc[col]['safety_score']
-                        
-                        # Load image (use segmented blend version)
-                        img = self.load_and_resize_image(img_name, target_size=(120, 120), use_segmented=True)
-                        
-                        if img is not None:
-                            axes[row, col + 1].imshow(img)
-                        else:
-                            axes[row, col + 1].text(0.5, 0.5, 'Not found', ha='center', va='center', 
-                                                  transform=axes[row, col + 1].transAxes, fontsize=12)
-                        
-                        axes[row, col + 1].set_title(f'{safety_score:.3f}', fontsize=12, fontweight='bold')
-                        axes[row, col + 1].axis('off')
-                    else:
-                        axes[row, col + 1].axis('off')
-        
-        plt.tight_layout()
-        
-        # Save figure
-        fig_path = self.output_dir / 'figure_7_image_grid_by_wegtype.png'
-        plt.savefig(fig_path, dpi=300, bbox_inches='tight')
-        print(f"Figure 7 saved to: {fig_path}")
-        plt.close()
+        if self.has_gradcam_data:
+            self._create_image_grid_figure_with_cam(
+                merged_data=merged_data,
+                grouping_col='wegtype_en',
+                unique_groups=unique_wegtypes,
+                n_groups=n_wegtypes,
+                figure_num=7,
+                title='Examples of Images by Safety Score Quantiles within Road Types'
+            )
+        else:
+            self._create_image_grid_figure_without_cam(
+                merged_data=merged_data,
+                grouping_col='wegtype_en',
+                unique_groups=unique_wegtypes,
+                n_groups=n_wegtypes,
+                figure_num=7,
+                title='Examples of Images by Safety Score Quantiles within Road Types'
+            )
         
         return merged_data
     
@@ -837,8 +819,11 @@ class PostModelingAnalyzer:
         
         # Translation dictionary for land use types
         buildenvironment_translation = {
-            'Industrieterrein': 'Industrial',
-            'Woongebied': 'Residential'
+            'Hoofdweg': 'Main road',
+            'Industriet': 'Industrial',
+            'Recreatie': 'Recreation',
+            'Woongebied': 'Residential',
+            'Wijkontslu': 'Access road',
         }
         
         # Merge safety scores with design data
@@ -870,85 +855,140 @@ class PostModelingAnalyzer:
         # Get unique buildenvironments and sort by safety scores within each
         unique_envs = sorted(merged_data['buildenvironment_en'].unique())
         n_envs = len(unique_envs)
-        n_cols = 5
-        
-        # Create figure with one extra column for labels
-        fig, axes = plt.subplots(n_envs, n_cols + 1, figsize=(18, 3*n_envs))
-        if n_envs == 1:
-            axes = axes.reshape(1, -1)
-        
-        fig.suptitle('Image Grid: Representative Samples by Safety Score Quantiles within Land Use Types', fontsize=20, fontweight='bold', y=0.98)
-        
-        for row, env in enumerate(unique_envs):
-            env_data = merged_data[merged_data['buildenvironment_en'] == env].sort_values('safety_score')
-            
-            # First column: environment label
-            axes[row, 0].text(0.5, 0.5, env, ha='center', va='center', 
-                             transform=axes[row, 0].transAxes, fontsize=16, fontweight='bold', rotation=0)
-            axes[row, 0].axis('off')
-            
-            # Divide into quantiles and sample randomly from each
-            if len(env_data) >= n_cols:
-                quantiles = np.linspace(0, 1, n_cols + 1)
-                for col in range(n_cols):
-                    q_start = quantiles[col]
-                    q_end = quantiles[col + 1]
-                    start_idx = int(q_start * len(env_data))
-                    end_idx = int(q_end * len(env_data))
-                    if end_idx == start_idx:
-                        end_idx = start_idx + 1
-                    quantile_data = env_data.iloc[start_idx:end_idx]
-                    
-                    if len(quantile_data) > 0:
-                        # Randomly sample one image from this quantile
-                        sampled_row = quantile_data.sample(n=1).iloc[0]
-                        img_name = sampled_row['image_name']
-                        safety_score = sampled_row['safety_score']
-                        
-                        # Load image (use segmented blend version)
-                        img = self.load_and_resize_image(img_name, target_size=(120, 120), use_segmented=True)
-                        
-                        if img is not None:
-                            axes[row, col + 1].imshow(img)
-                        else:
-                            axes[row, col + 1].text(0.5, 0.5, 'Not found', ha='center', va='center', 
-                                                  transform=axes[row, col + 1].transAxes, fontsize=12)
-                        
-                        axes[row, col + 1].set_title(f'{safety_score:.3f}', fontsize=12, fontweight='bold')
-                        axes[row, col + 1].axis('off')
-                    else:
-                        axes[row, col + 1].axis('off')
-            else:
-                # If not enough data, just show available images
-                for col in range(n_cols):
-                    if col < len(env_data):
-                        img_name = env_data.iloc[col]['image_name']
-                        safety_score = env_data.iloc[col]['safety_score']
-                        
-                        # Load image (use segmented blend version)
-                        img = self.load_and_resize_image(img_name, target_size=(120, 120), use_segmented=True)
-                        
-                        if img is not None:
-                            axes[row, col + 1].imshow(img)
-                        else:
-                            axes[row, col + 1].text(0.5, 0.5, 'Not found', ha='center', va='center', 
-                                                  transform=axes[row, col + 1].transAxes, fontsize=12)
-                        
-                        axes[row, col + 1].set_title(f'{safety_score:.3f}', fontsize=12, fontweight='bold')
-                        axes[row, col + 1].axis('off')
-                    else:
-                        axes[row, col + 1].axis('off')
-        
-        plt.tight_layout()
-        
-        # Save figure
-        fig_path = self.output_dir / 'figure_8_image_grid_by_buildenvironment.png'
-        plt.savefig(fig_path, dpi=300, bbox_inches='tight')
-        print(f"Figure 8 saved to: {fig_path}")
-        plt.close()
+
+        if self.has_gradcam_data:
+            self._create_image_grid_figure_with_cam(
+                merged_data=merged_data,
+                grouping_col='buildenvironment_en',
+                unique_groups=unique_envs,
+                n_groups=n_envs,
+                figure_num=8,
+                title='Examples of Images by Safety Score Quantiles within Land Use Types'
+            )
+        else:
+            self._create_image_grid_figure_without_cam(
+                merged_data=merged_data,
+                grouping_col='buildenvironment_en',
+                unique_groups=unique_envs,
+                n_groups=n_envs,
+                figure_num=8,
+                title='Examples of Images by Safety Score Quantiles within Land Use Types'
+            )
         
         return merged_data
     
+    def _create_image_grid_figure_with_cam(self, merged_data, grouping_col, unique_groups, n_groups, figure_num, title):
+        """Helper function to create image grid with Grad-CAM overlays."""
+        n_cols = 5
+        n_image_cols = n_cols * 2
+        
+        fig, axes = plt.subplots(n_groups, n_image_cols + 1, figsize=(24, 3 * n_groups), 
+                                 gridspec_kw={'width_ratios': [1.5] + [1]*n_image_cols})
+        if n_groups == 1:
+            axes = axes.reshape(1, -1)
+        
+        fig.suptitle(title, fontsize=20, fontweight='bold', y=0.98)
+        
+        for row, group_val in enumerate(unique_groups):
+            group_data = merged_data[merged_data[grouping_col] == group_val].sort_values('safety_score')
+            
+            axes[row, 0].text(0.5, 0.5, group_val, ha='center', va='center', 
+                             transform=axes[row, 0].transAxes, fontsize=16, fontweight='bold', rotation=0, wrap=True)
+            axes[row, 0].axis('off')
+            
+            if len(group_data) >= n_cols:
+                quantiles = np.linspace(0, 1, n_cols + 1)
+                for col in range(n_cols):
+                    ax_segmented = axes[row, 1 + 2 * col]
+                    ax_gradcam = axes[row, 1 + 2 * col + 1]
+                    
+                    if row == 0:
+                        ax_segmented.set_title("Segmented", fontsize=14)
+                        ax_gradcam.set_title("Grad-CAM", fontsize=14)
+
+                    q_start, q_end = quantiles[col], quantiles[col+1]
+                    start_idx, end_idx = int(q_start * len(group_data)), int(q_end * len(group_data))
+                    if end_idx == start_idx: end_idx += 1
+                    
+                    quantile_data = group_data.iloc[start_idx:end_idx]
+                    
+                    if len(quantile_data) > 0:
+                        sampled = quantile_data.sample(n=1).iloc[0]
+                        img_name, score = sampled['image_name'], sampled['safety_score']
+                        
+                        seg_img = self.load_and_resize_image(img_name, use_segmented=True)
+                        cam_img = self.load_gradcam_overlay(img_name)
+                        
+                        ax_segmented.imshow(seg_img if seg_img else self._create_placeholder("Not Found"))
+                        ax_gradcam.imshow(cam_img if cam_img else self._create_placeholder("No CAM"))
+                        
+                        ax_segmented.text(0.05, 0.95, f'{score:.3f}', transform=ax_segmented.transAxes, 
+                                          ha='left', va='top', color='white', fontsize=12,
+                                          bbox=dict(facecolor='black', alpha=0.5, pad=2))
+                    
+                    ax_segmented.axis('off')
+                    ax_gradcam.axis('off')
+            else:
+                for col in range(n_image_cols):
+                    axes[row, 1+col].axis('off')
+        
+        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        fig_path = self.output_dir / f'figure_{figure_num}_image_grid_by_{grouping_col}_with_cam.png'
+        plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+        print(f"Figure {figure_num} with CAM saved to: {fig_path}")
+        plt.close()
+
+    def _create_image_grid_figure_without_cam(self, merged_data, grouping_col, unique_groups, n_groups, figure_num, title):
+        """Helper function to create image grid without Grad-CAM overlays (original logic)."""
+        n_cols = 5
+        fig, axes = plt.subplots(n_groups, n_cols + 1, figsize=(18, 3 * n_groups))
+        if n_groups == 1:
+            axes = axes.reshape(1, -1)
+        
+        fig.suptitle(title, fontsize=20, fontweight='bold', y=0.98)
+        
+        for row, group_val in enumerate(unique_groups):
+            group_data = merged_data[merged_data[grouping_col] == group_val].sort_values('safety_score')
+            
+            axes[row, 0].text(0.5, 0.5, group_val, ha='center', va='center', 
+                             transform=axes[row, 0].transAxes, fontsize=16, fontweight='bold', rotation=0, wrap=True)
+            axes[row, 0].axis('off')
+            
+            if len(group_data) >= n_cols:
+                quantiles = np.linspace(0, 1, n_cols + 1)
+                for col in range(n_cols):
+                    ax = axes[row, col + 1]
+                    q_start, q_end = quantiles[col], quantiles[col+1]
+                    start_idx, end_idx = int(q_start * len(group_data)), int(q_end * len(group_data))
+                    if end_idx == start_idx: end_idx += 1
+                    
+                    quantile_data = group_data.iloc[start_idx:end_idx]
+                    
+                    if len(quantile_data) > 0:
+                        sampled = quantile_data.sample(n=1).iloc[0]
+                        img_name, score = sampled['image_name'], sampled['safety_score']
+                        
+                        img = self.load_and_resize_image(img_name, use_segmented=True)
+                        ax.imshow(img if img else self._create_placeholder("Not Found"))
+                        ax.set_title(f'{score:.3f}', fontsize=12, fontweight='bold')
+                    
+                    ax.axis('off')
+            else:
+                for col in range(n_cols):
+                    axes[row, col+1].axis('off')
+        
+        plt.tight_layout()
+        fig_path = self.output_dir / f'figure_{figure_num}_image_grid_by_{grouping_col}.png'
+        plt.savefig(fig_path, dpi=300, bbox_inches='tight')
+        print(f"Figure {figure_num} saved to: {fig_path}")
+        plt.close()
+
+    def _create_placeholder(self, text, size=(120, 120)):
+        """Creates a placeholder image with text."""
+        img = Image.new('RGB', size, color='lightgray')
+        # No drawing on the image to avoid dependency on Pillow's ImageDraw
+        return img
+
     def create_summary_statistics(self):
         """Create and save summary statistics"""
         
@@ -1010,8 +1050,8 @@ class PostModelingAnalyzer:
         results = {}
         
         # Figures 1-3: Utility comparisons and model corrections
-        results['top_5_best_higher'] = self.create_figure_1()
-        results['top_5_wo_safety_higher'] = self.create_figure_2()
+        results['combined_model_comparison'] = self.create_figure_1()
+        # Figure 2 is now merged into Figure 1, so we skip it
         results['model_corrections'] = self.create_figure_3()
         
         # Figures 4-5: Safety score distributions
@@ -1029,7 +1069,8 @@ class PostModelingAnalyzer:
         results['statistics'] = self.create_summary_statistics()
         
         print("\n=== ANALYSIS COMPLETED ===")
-        print(f"All 8 figures and statistics saved to: {self.output_dir}")
+        print(f"All 7 figures and statistics saved to: {self.output_dir}")
+        print("Note: Figures 1 and 2 have been merged into a single combined comparison figure")
         
         return results
 

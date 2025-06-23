@@ -190,3 +190,9 @@ cython_debug/
 
 # wandb related files
 wandb/
+
+
+# .drawio files in any directory
+*.drawio
+# .xml files in any directory
+*.xml
