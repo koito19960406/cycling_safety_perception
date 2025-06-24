@@ -1060,7 +1060,7 @@ class PostModelingAnalyzer:
                     axes[row, 1+col].axis('off')
         
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        fig_path = self.output_dir / f'figure_{figure_num}_image_grid_by_{grouping_col}_en_with_cam.png'
+        fig_path = self.output_dir / f'figure_{figure_num}_image_grid_by_{grouping_col}_with_cam.png'
         plt.savefig(fig_path, dpi=300, bbox_inches='tight')
         print(f"Figure {figure_num} with CAM saved to: {fig_path}")
         plt.close()
@@ -1111,7 +1111,7 @@ class PostModelingAnalyzer:
                     axes[row, col+1].axis('off')
         
         plt.tight_layout()
-        fig_path = self.output_dir / f'figure_{figure_num}_image_grid_by_{grouping_col}_en.png'
+        fig_path = self.output_dir / f'figure_{figure_num}_image_grid_by_{grouping_col}.png'
         plt.savefig(fig_path, dpi=300, bbox_inches='tight')
         print(f"Figure {figure_num} saved to: {fig_path}")
         plt.close()
