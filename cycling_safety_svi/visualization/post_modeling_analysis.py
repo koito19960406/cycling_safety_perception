@@ -1,7 +1,7 @@
 """
 Post-Modeling Analysis Script
 
-This script generates 8 visualizations comparing the stepwise_best and stepwise_wo_safety models:
+This script generates 10 visualizations comparing the stepwise_best and stepwise_wo_safety models:
 1. Figure 1: Top 5 images where stepwise_best utilities > stepwise_wo_safety utilities
 2. Figure 2: Top 5 images where stepwise_wo_safety utilities > stepwise_best utilities  
 3. Figure 3: Top 5 image pairs with wrong choice using stepwise_wo_safety but correct with stepwise_best
@@ -10,6 +10,8 @@ This script generates 8 visualizations comparing the stepwise_best and stepwise_
 6. Figure 6: Scatter plots between predicted safety scores, utilities, and segmentation features
 7. Figure 7: Grid of images sorted by predicted safety scores, grouped by wegtype
 8. Figure 8: Grid of images sorted by predicted safety scores, grouped by buildenvironment
+9. Figure 9: 3D scatter plot of safety score, utility, and vegetation for eye-catching visualization.
+10. Figure 10: 4D scatter plot of vegetation, terrain, and safety, with utility as dot size.
 """
 
 import pandas as pd
@@ -508,7 +510,6 @@ class PostModelingAnalyzer:
             'Wijkontsluitingsweg': 'Access road',
             'Hoofdweg': 'Main road'
         }
-        
         # Merge safety scores with design data
         # First get all unique images from design data
         img1_design = self.design_data[['alt1_imageid', 'alt1_wegtype']].rename(
@@ -701,15 +702,15 @@ class PostModelingAnalyzer:
         # Create scatter plot matrix
         n_vars = len(available_vars)
         fig, axes = plt.subplots(n_vars, n_vars, figsize=(20, 20))
-        fig.suptitle('Scatter Plot Matrix: Safety Scores, Utilities, and Segmentation Features', fontsize=20, fontweight='bold', y=0.98)
+        fig.suptitle('Scatter Plot Matrix: Safety Scores, Utilities, and Segmentation Features', fontsize=24, fontweight='bold', y=0.98)
         
         for i, var1 in enumerate(available_vars):
             for j, var2 in enumerate(available_vars):
                 if i == j:
                     # Diagonal: histogram
                     axes[i, j].hist(merged_data[var1], bins=20, alpha=0.7, color='skyblue')
-                    axes[i, j].set_title(var1, fontsize=14, fontweight='bold')
-                    axes[i, j].tick_params(axis='both', labelsize=12)
+                    axes[i, j].set_title(var1, fontsize=18, fontweight='bold')
+                    axes[i, j].tick_params(axis='both', labelsize=14)
                 else:
                     # Off-diagonal: scatter plot
                     axes[i, j].scatter(merged_data[var2], merged_data[var1], alpha=0.6, s=25)
@@ -718,13 +719,13 @@ class PostModelingAnalyzer:
                     corr = merged_data[var1].corr(merged_data[var2])
                     axes[i, j].text(0.05, 0.95, f'r={corr:.3f}', transform=axes[i, j].transAxes, 
                                    bbox=dict(boxstyle="round,pad=0.3", facecolor='white', alpha=0.8),
-                                   fontsize=13, fontweight='bold')
-                    axes[i, j].tick_params(axis='both', labelsize=12)
+                                   fontsize=16, fontweight='bold')
+                    axes[i, j].tick_params(axis='both', labelsize=14)
                 
                 if i == n_vars - 1:
-                    axes[i, j].set_xlabel(var2, fontsize=14)
+                    axes[i, j].set_xlabel(var2, fontsize=18)
                 if j == 0:
-                    axes[i, j].set_ylabel(var1, fontsize=14)
+                    axes[i, j].set_ylabel(var1, fontsize=18)
         
         plt.tight_layout()
         
@@ -748,10 +749,10 @@ class PostModelingAnalyzer:
         
         # Translation dictionary for road types
         wegtype_translation = {
-            'Fietspad vrijliggend': 'Separated cycle path',
-            'Solitair fietspad': 'Separated cycle path',
+            'Fietspad vrijliggend': 'Separated\ncycle path',
+            'Solitair fietspad': 'Separated\ncycle path',
             'Normale weg': 'Normal road',
-            'Fietsstrook': 'Painted cycle path',
+            'Fietsstrook': 'Painted\ncycle path',
             'Wijkontsluitingsweg': 'Access road',
             'Hoofdweg': 'Main road'
         }
@@ -877,23 +878,149 @@ class PostModelingAnalyzer:
         
         return merged_data
     
+    def create_figure_9_3d_scatter(self):
+        """
+        Figure 9: 3D scatter plot of safety score, utility, and vegetation for eye-catching visualization.
+        """
+        print("Creating Figure 9: 3D Scatter Plot")
+
+        if self.safety_scores is None or self.pixel_ratios is None:
+            print("Warning: Cannot create Figure 9 - missing safety scores or pixel ratios")
+            return None
+
+        # Merge data for unique images
+        unique_utilities = self.get_unique_image_utilities()
+
+        # Ensure string types for merging
+        unique_utilities['image_name'] = unique_utilities['image_name'].astype(str)
+        safety_scores_copy = self.safety_scores.copy()
+        safety_scores_copy['image_name'] = safety_scores_copy['image_name'].astype(str)
+        pixel_ratios_copy = self.pixel_ratios.copy()
+        pixel_ratios_copy['filename_key'] = pixel_ratios_copy['filename_key'].astype(str)
+
+        # Merge with safety scores
+        merged_data = unique_utilities.merge(safety_scores_copy, on='image_name', how='inner')
+
+        # Merge with pixel ratios
+        merged_data = merged_data.merge(pixel_ratios_copy, left_on='image_name', right_on='filename_key', how='inner')
+
+        if len(merged_data) == 0 or 'Vegetation' not in merged_data.columns:
+            print("Warning: No matching data or 'Vegetation' column found for 3D scatter plot")
+            return None
+
+        # Select variables for the plot
+        x = merged_data['safety_score']
+        y = merged_data['utility_stepwise_best']
+        z = merged_data['Vegetation']
+        
+        # Create figure
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(111, projection='3d')
+        
+        # Create scatter plot
+        ax.scatter(x, y, z, c='purple', marker='o', s=25, alpha=0.6, depthshade=True)
+        
+        # Remove axes, panes, and text
+        ax.set_axis_off()
+        
+        # Set transparent background for the figure and axes
+        fig.patch.set_alpha(0)
+        ax.patch.set_alpha(0)
+        
+        # Set a nice perspective
+        ax.view_init(elev=25, azim=135)
+        
+        # Save figure
+        fig_path = self.output_dir / 'figure_9_3d_scatter_eyecatcher.png'
+        plt.savefig(fig_path, dpi=300, bbox_inches='tight', transparent=True, pad_inches=0)
+        print(f"Figure 9 saved to: {fig_path}")
+        plt.close()
+        
+        return merged_data
+    
+    def create_figure_10_4d_scatter(self):
+        """
+        Figure 10: 4D scatter plot of vegetation, terrain, and safety, with utility as dot size.
+        """
+        print("Creating Figure 10: 4D Scatter Plot")
+
+        if self.safety_scores is None or self.pixel_ratios is None:
+            print("Warning: Cannot create Figure 10 - missing safety scores or pixel ratios")
+            return None
+
+        # Merge data for unique images
+        unique_utilities = self.get_unique_image_utilities()
+
+        # Ensure string types for merging
+        unique_utilities['image_name'] = unique_utilities['image_name'].astype(str)
+        safety_scores_copy = self.safety_scores.copy()
+        safety_scores_copy['image_name'] = safety_scores_copy['image_name'].astype(str)
+        pixel_ratios_copy = self.pixel_ratios.copy()
+        pixel_ratios_copy['filename_key'] = pixel_ratios_copy['filename_key'].astype(str)
+
+        # Merge with safety scores
+        merged_data = unique_utilities.merge(safety_scores_copy, on='image_name', how='inner')
+
+        # Merge with pixel ratios
+        merged_data = merged_data.merge(pixel_ratios_copy, left_on='image_name', right_on='filename_key', how='inner')
+
+        required_cols = ['Vegetation', 'Terrain', 'safety_score', 'utility_stepwise_best']
+        if not all(col in merged_data.columns for col in required_cols):
+            print(f"Warning: Missing one or more required columns for Figure 10: {required_cols}")
+            return None
+
+        # Select variables for the plot
+        x = merged_data['Vegetation']
+        y = merged_data['Terrain']
+        z = merged_data['safety_score']
+        size = merged_data['utility_stepwise_best']
+        
+        # Scale utility to be used as size (s must be non-negative)
+        # We'll normalize it to a range, e.g., 10 to 500
+        size_scaled = np.interp(size, (size.min(), size.max()), (10, 500))
+
+        # Create figure
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(111, projection='3d')
+        
+        # Create scatter plot
+        ax.scatter(x, y, z, s=size_scaled, c='purple', marker='o', alpha=0.6, depthshade=True)
+        
+        # Remove axes, panes, and text
+        ax.set_axis_off()
+        
+        # Set transparent background for the figure and axes
+        fig.patch.set_alpha(0)
+        ax.patch.set_alpha(0)
+        
+        # Set a nice perspective
+        ax.view_init(elev=30, azim=45)
+        
+        # Save figure
+        fig_path = self.output_dir / 'figure_10_4d_scatter_eyecatcher.png'
+        plt.savefig(fig_path, dpi=300, bbox_inches='tight', transparent=True, pad_inches=0)
+        print(f"Figure 10 saved to: {fig_path}")
+        plt.close()
+        
+        return merged_data
+    
     def _create_image_grid_figure_with_cam(self, merged_data, grouping_col, unique_groups, n_groups, figure_num, title):
         """Helper function to create image grid with Grad-CAM overlays."""
         n_cols = 5
         n_image_cols = n_cols * 2
         
-        fig, axes = plt.subplots(n_groups, n_image_cols + 1, figsize=(24, 3 * n_groups), 
+        fig, axes = plt.subplots(n_groups, n_image_cols + 1, figsize=(30, 3 * n_groups), 
                                  gridspec_kw={'width_ratios': [1.5] + [1]*n_image_cols})
         if n_groups == 1:
             axes = axes.reshape(1, -1)
         
-        fig.suptitle(title, fontsize=20, fontweight='bold', y=0.98)
+        # fig.suptitle(title, fontsize=20, fontweight='bold', y=0.98)
         
         for row, group_val in enumerate(unique_groups):
             group_data = merged_data[merged_data[grouping_col] == group_val].sort_values('safety_score')
             
             axes[row, 0].text(0.5, 0.5, group_val, ha='center', va='center', 
-                             transform=axes[row, 0].transAxes, fontsize=16, fontweight='bold', rotation=0, wrap=True)
+                             transform=axes[row, 0].transAxes, fontsize=26, fontweight='bold', rotation=0, wrap=True)
             axes[row, 0].axis('off')
             
             if len(group_data) >= n_cols:
@@ -903,8 +1030,8 @@ class PostModelingAnalyzer:
                     ax_gradcam = axes[row, 1 + 2 * col + 1]
                     
                     if row == 0:
-                        ax_segmented.set_title("Segmented", fontsize=14)
-                        ax_gradcam.set_title("Grad-CAM", fontsize=14)
+                        ax_segmented.set_title("Segmented", fontsize=22)
+                        ax_gradcam.set_title("Grad-CAM", fontsize=22)
 
                     q_start, q_end = quantiles[col], quantiles[col+1]
                     start_idx, end_idx = int(q_start * len(group_data)), int(q_end * len(group_data))
@@ -1065,11 +1192,17 @@ class PostModelingAnalyzer:
         results['image_grid_wegtype'] = self.create_figure_7()
         results['image_grid_buildenvironment'] = self.create_figure_8()
         
+        # Figure 9: 3D scatter plot
+        results['3d_scatter'] = self.create_figure_9_3d_scatter()
+        
+        # Figure 10: 4D scatter plot
+        results['4d_scatter'] = self.create_figure_10_4d_scatter()
+        
         # Create summary statistics
         results['statistics'] = self.create_summary_statistics()
         
         print("\n=== ANALYSIS COMPLETED ===")
-        print(f"All 7 figures and statistics saved to: {self.output_dir}")
+        print(f"All 10 figures and statistics saved to: {self.output_dir}")
         print("Note: Figures 1 and 2 have been merged into a single combined comparison figure")
         
         return results
