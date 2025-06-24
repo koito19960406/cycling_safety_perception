@@ -30,7 +30,8 @@ def main():
         "references/route_choice/1-s2.0-S1361920921000651-main.pdf",
         "references/route_choice/1-s2.0-S1361920922002917-main.pdf",
         "references/Scientific_Paper.pdf",
-        "references/ssrn-4886041 (2).pdf",
+        "references/Which_Cycling_Environment_Appears_Safer_Learning_Cycling_Safety_Perceptions_From_Pairwise_Image_Comparisons (1).pdf",
+        "references/1-s2.0-S0965856424003483-main.pdf"
     ]
 
     for pdf_path in pdf_files:

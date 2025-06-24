@@ -1,0 +1,1056 @@
+IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025 1689
+Which Cycling Environment Appears Safer?
+Learning Cycling Safety Perceptions From Pairwise
+Image Comparisons
+Miguel Costa
+ , Manuel Marques, Carlos Lima Azevedo
+ , Felix Wilhelm Siebert
+ , and Filipe Moura
+Abstract— Cycling is critical for cities to transition to more
+sustainable transport modes. Yet, safety concerns remain a
+critical deterrent for individuals to cycle. If individuals perceive
+an environment as unsafe for cycling, it is likely that they
+will prefer other means of transportation. Yet, capturing and
+understanding how individuals perceive cycling risk is complex
+and often slow, with researchers defaulting to traditional surveys
+and in-loco interviews. In this study, we tackle this problem.
+We base our approach on using pairwise comparisons of real-
+world images, repeatedly presenting respondents with pairs of
+road environments and asking them to select the one they perceive
+as safer for cycling, if any. Using the collected data, we train a
+siamese-convolutional neural network using a multi-loss frame-
+work that learns from individuals’ responses, learns preferences
+directly from images, and includes ties (often discarded in the
+literature). Effectively, this model learns to predict human-style
+perceptions, evaluating which cycling environments are perceived
+as safer. Our model achieves good results, showcasing this
+approach has a real-life impact, such as improving interventions’
+effectiveness. Furthermore, it facilitates the continuous assess-
+ment of changing cycling environments, permitting short-term
+evaluations of measures to enhance perceived cycling safety.
+Received 4 October 2023; revised 5 July 2024 and 18 October 2024;
+accepted 16 November 2024. Date of publication 3 January 2025; date of
+current version 4 February 2025. This work was supported in part by the Fun-
+dação para a Ciência e Tecnologia (FCT) under Grant PD/BD/142948/2018;
+in part by the Civil Engineering Research and Innovation for Sustain-
+ability (CERIS) FCT funding under Grant UIDB/04625/2020; in part by
+the Laboratory for Robotics and Engineering Systems (LARSyS) FCT
+funding (DOI: 10.54499/LA/P/0083/2020, 10.54499/UIDP/50009/2020, and
+10.54499/UIDB/50009/2020); in part by the PT Smart Retail Project through
+Agência para a Competitividade e Inovação (IAPMEI)–Agência para a Com-
+petitividade e Inovação under Grant PRR-02/C05-i01.01/2022.PC645440011-
+00000062; in part by the Department of Technology, Management, and
+Economics at the Technical University of Denmark (DTU); and in part
+by STREETS4ALL Project under Grant PTDC/ECI-TRA/3120/2021 [DOI:
+10.54499/PTDC/ECI-TRA/3120/2021]. The Associate Editor for this article
+was Q. Wang. (Corresponding author: Miguel Costa.)
+This work involved human subjects or animals in its research. Approval of
+all ethical and experimental procedures and protocols was granted by Instituto
+Superior Técnico’s Ethics Committee.
+Miguel Costa is with the Civil Engineering Research and Innovation for
+Sustainability and the Institute for Systems and Robotics, Instituto Superior
+Técnico, Universidade de Lisboa, 1649-004 Lisbon, Portugal, and also with
+the Department of Technology, Management and Economics, Technical Uni-
+versity of Denmark, 2800 Lyngby, Denmark (e-mail: migcos@dtu.dk).
+Manuel Marques is with the Institute for Systems and Robotics, Instituto
+Superior Técnico, Universidade de Lisboa, 1649-004 Lisbon, Portugal (e-mail:
+manuel@isr.tecnico.ulisboa.pt).
+Carlos Lima Azevedo and Felix Wilhelm Siebert are with the Department of
+Technology, Management and Economics, Technical University of Denmark,
+2800 Lyngby, Denmark (e-mail: climaz@dtu.dk; felix@dtu.dk).
+Filipe Moura is with the Civil Engineering Research and Innovation for
+Sustainability, Instituto Superior Técnico, Universidade de Lisboa, 1649-004
+Lisbon, Portugal (e-mail: fmoura@tecnico.ulisboa.pt).
+Digital Object Identifier 10.1109/TITS.2024.3507639
+Finally, our method can be efficiently deployed in different
+locations with a growing number of openly available street-view
+images.
+Index Terms— Perception of cycling safety, subjective cycling
+safety, siamese-convolutional neural network, pairwise image
+comparisons, Berlin (Germany).
+I. I NTRODUCTION
+C
+YCLING
+can promote short and long-term health ben-
+efits [1], [2] and reduce greenhouse gas emissions and
+air pollutants [3], [4], compelling cities to promote cycling as
+a means of transportation. However, many deterrents exist for
+people not to cycle. These include social barriers [5], physical
+barriers [6], and psychological factors [7].
+From these, safety concerns (fears of being involved in
+an accident) are often considered the main deterrent to
+cycling [8], [9]. If individuals perceive cycling environments
+as unsafe, they will avoid cycling and most certainly prefer
+other modes of transportation. Previously, perception of safety
+has been found to be affected by different factors, including
+helmets and clothing [10], [11], road users’ behavior [12],
+road usage and compliance with rules [10], or infrastructure
+and cycling facilities [13], [14], [15], [16]. Research has
+been typically carried out using in situ surveys or post-riding
+interviews and conventional choice modeling tools. However,
+these are often not scalable due to their inherent high costs,
+making them not easily redeployed over time or space.
+This work presents a novel methodological approach to
+more efficiently assess the perception of cycling safety, learn-
+ing perceived cycling safety directly from real-world images
+and users’ choices. Effectively, we want to answer the fol-
+lowing question: “Given two cycling environments, which
+is perceived as safer for cycling?”, as shown in Figure 1
+which presents an outline of the pairwise image comparison
+survey we conducted. Ultimately, we use the collected data to
+develop a model which can be used to score and map cycling
+environments’ perceived safety, which we showcase for Berlin,
+Germany. Our work’s main contributions are threefold:
+• We create and deploy a new pairwise image comparison
+survey where we repeatedly present respondents with two
+road environment images and ask them to select the one
+they perceive as safer for cycling, if any.
+• We propose PCS-Net, a neural network that predicts
+which environment is perceived as safer for cycling from
+two images trained on the collected comparisons.
+1558-0016 © 2025 IEEE. Personal use is permitted, but republication/redistribution requires IEEE permission.
+See https://www.ieee.org/publications/rights/index.html for more information.
+Authorized licensed use limited to: National University of Singapore. Downloaded on June 24,2025 at 09:17:38 UTC from IEEE Xplore.  Restrictions apply. 1690 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025
+Fig. 1. Example of the pairwise image comparison survey. Users are shown
+two images and asked to select the one they consider safer for cycling, if any.
+• PCS-Net is able to predict and learn from ties (when
+there is no perceived difference between the two images),
+which are often discarded in past research.
+Next, we overview related work in Section II. Section III
+explains our approach, including data and models. Experimen-
+tal results are detailed in Section IV, and we apply PCS-Net
+at a city-wide scale in Section V. Section VI discusses our
+results and its limitations. Section VII finalizes the paper and
+draws possible paths for future research.
+II. R ELATED WORK
+A. Subjective Cycling Safety
+Perceived or subjective cycling safety relates to how humans
+subjectively experience cycling accident risk. As the most
+critical deterrent to urban cycling [8], [9], understanding
+what impacts it is vital to adequately provide cyclists with
+environments they feel safe. Aspects that contribute to this
+sense of safety include: traffic [8], interactions with drivers and
+road rules compliance [10], [17], sharing the road space [18],
+and road and cycling infrastructure [15], [19].
+Past research has typically focused on qualitative surveys,
+in situ or post-riding interviews to identify elements that
+negatively arouse individuals [8], [11]. However, these are
+often time-consuming and costly, requiring critical preparation
+and control, making these approaches not scalable nor trans-
+ferable between cities. Additionally, due to their inherent focus
+on specific routes or infrastructure typologies, recruitment of
+interviewees may not be easy, leading to non-diverse and non-
+representative groups of individuals being interviewed [20].
+More recent approaches, mainly driven by technological
+advances, have led researchers to conduct other exper-
+iments. These focus on quantitatively assessing human
+responses, including using wearable sensors [21], cycling
+videos [22], drawings of mental maps [23], virtual reality [24],
+semi-realistic street-view-style images [25], or eye tracking
+devices [26]. Yet, these usually require precise calibration
+and monitoring or individual training to use such technology,
+hindering their transferability and repeatability.
+All in all, understanding the impact of different elements on
+individuals’ perceptions can lead to objectively characterize
+urban environments, leading to the creation of indicators
+or indices that can help urban planners compare and ana-
+lyze different environments. To this end, the Bicycle Stress
+Level [27] and the Level of Traffic Stress [28], [29] remain the
+most well-known indices that attempt to measure bikeability
+and perceived risk. Yet, to compute such metrics, manual
+labor is usually employed, requiring individuals to anno-
+tate environment elements manually. Reference [30] approach
+fills this gap, deriving a bikeability index from computer
+vision-extracted features from street-view images (SVI). This
+automatic and scalable methodology to score environments
+effortlessly can eventually replace more traditional techniques.
+Nevertheless, it covers five bikeability aspects, of which per-
+ceptions are one, which can be inadvertently mischaracterized
+if appropriate supervision is not employed. In this work, we are
+interested in a similar approach that covers the perception
+of cycling risk only, is based on individuals’ perceptions
+of what categorizes one environment as safer than another,
+and is equally scalable. Such an approach, in principle, can
+simulate individuals’ perceptions and thus reduce the time
+and cost of assessing perceived safety compared to traditional
+methodologies.
+B. Computer Vision & SVI Applied in Urban Studies
+Recently, a growing number of works have been exploring
+image processing and computer vision techniques to study
+urban environments and human perceptions. For example,
+these have explored openness and enclosure [31], green-
+ery [32], house prices [33], and different human perceptions
+[34], [35], [36], [37], [38].
+Research has typically used traditional or deep learning-
+extracted features from SVI in classification or regression
+problems to evaluate the impact of such environment-related
+features. With the growing access to openly available street-
+view images, researchers can perform continuous and scalable
+assessments of urban environments more easily than in the
+past. In transportation, using SVI has been proven useful
+in, among others, studying accessibility [39], [40], walkabil-
+ity [37], bikeability [30], and objective road safety [41].
+With this in mind, our work is greatly inspired by that
+of [35], which uses computer vision to predict how individuals
+sense urban environments across different perspectives. The
+authors use a large database of image comparisons to train
+a model capable of “simulating” human choice. Such work
+has laid the foundations for many possible city-wide analyses,
+such as understanding how the built environment might affect
+behavior, travel choices, and even home location. Further,
+as the authors demonstrate and hypothesize, such an approach
+can be used to enlarge existing datasets and expand predictions
+across geographies. This endeavor can help to better allocate
+city resources and make data-driven decisions. Yet, their model
+disregards a vast number of observations as it cannot handle
+ties (equally perceived images). We consider that there is
+a lot of information to be gained here. Thus, we build up
+from [35]’s approach, proposing a methodology that draws
+from pairwise image comparisons, includes ties, and can be
+applied to analyze cycling perception of safety.
+C. Pairwise Comparisons
+Pairwise comparison models aim to predict the outcome of
+a two-item comparison, i.e., when comparing A and B, would
+Authorized licensed use limited to: National University of Singapore. Downloaded on June 24,2025 at 09:17:38 UTC from IEEE Xplore.  Restrictions apply. COSTA et al.: WHICH CYCLING ENVIRONMENT APPEARS SAFER? LEARNING CYCLING SAFETY PERCEPTIONS 1691
+a user prefer A, B, or would they be perceived equally (tie)?
+Models typically follow the seminal works of [42] and [43],
+which assume a latent score s and the outcome probability of
+comparing items i and j a function of their scores, e.g., a user
+would likely choose item i if si > sj . The underlying goal is
+then to estimate the latent scores si from data.
+In principle, this is similar to the approach often used
+in contrast learning or rank sorting. For one, contrast and
+comparison in the perception of human beings has led to con-
+trastive learning method [44] where a model learns similarities
+and differences by looking at positive and negative examples
+versus an original example. Here, the goal is to maximize sim-
+ilarities between identical items while minimizing similarities
+between dissimilar items. On the other hand, in rank sorting,
+the goal is to order items based on a learnt latent score (rank).
+Yet, both approaches, together with paired models, seek to
+objectively uncover an item’s latent score that can be used
+later to understand how similar or dissimilar items are.
+In paired models, several methodologies have been proposed
+to extend the mentioned seminal works, including itera-
+tive algorithms [45], Bayesian models [46], spectral ranking
+algorithms [47], convex problem formulation [48], Gaussian
+processes [49], or other deep learning approaches [50]. Yet,
+most of these do not consider an item’s characteristics. In this
+work, we focus on deriving items’ scores directly from their
+features, and we hypothesyze that including such information
+can help achieve better prediction accuracy.
+III. L EARNING FROM PAIRWISE IMAGE COMPARISONS
+Images are vital in conveying messages and representations
+of real-world. We frame our approach under this context, using
+real-world images to map users’ safety perceptions of cycling
+environments. In this section, we will now detail our approach,
+including data collection and model training to predict which
+cycling environments are perceived as safer for cycling.
+A. Data: Pairwise Image Comparisons Survey
+First, we created a survey to capture data about individuals’
+safety perceptions semi-naturalistically. This two-part survey
+was approved by Instituto Superior Técnico’s Ethics Commit-
+tee and i) captured individuals’ cycling profiles (i.e., cycling
+proficiency), and ii) perceived cycling accident safety in dif-
+ferent environments using pairwise image comparisons. The
+first part consists of a modified version of [51] that classified
+individuals according to four cycling profiles:No Way, No How
+(NWNH), Interested but Concerned (IC), Enthused and Confi-
+dent (EC), and Strong and Fearless (SF) [52]. The sociodemo-
+graphic characteristics of participants were also captured. The
+survey was deployed online and took about 10-15 minutes
+to complete. Overall, 251 individuals partook in the survey.
+These were characterized as being 6% NWNH, 53% IC, 37%
+EC, and 4% SF; 60% identified as male, 40% as female, and
+<1% as other/prefer not to answer (NA); <1% were aged
+18–20, 45% were 21–30, 30% were 31–40, 16% were 41–50,
+8% were 51–60, and the rest were 61, older or NA.
+In this work, we focus exclusively on the second part of the
+survey. Data collected consists of 7281 pairwise image com-
+parisons (3.3 average comparisons per image), of which 18%
+were ties. Unlike traditional surveys, pairwise comparisons
+are straightforward, well suited for non-expert participants,
+and generally lead to lower measurement error than direct
+ratings [53]. We repeatedly presented respondents with two
+real-world images of cycling environments and asked them
+to select the one they thought was safer cycling. Equally
+sized images were shown side-by-side and users could choose
+between the left image ( y = −1), right image (y = 1), or,
+if they thought there was no apparent difference between the
+two, they could choose a “tie” (y = 0) option. Figure 1 depicts
+the image comparison setup.
+To choose what pairs of images were shown to participants,
+we used an iterative approach. We began by download-
+ing 4,480 road environment pictures of Berlin, Germany,
+from Mapillary (https://www.mapillary.com/), capturing var-
+ious infrastructure layouts, urban features, lighting conditions,
+and traffic conditions. Given the diversity of cycling environ-
+ments in these images, we employed a fractional factorial
+design to select which pairs of images to present to users.
+Each image and its corresponding cycling environment were
+pre-processed through semantic segmentation and built envi-
+ronment data extraction. We applied OCRNET [54] to
+segment each image and identify object areas, such as veg-
+etation, people, and cars. In total 19 classes of objects
+are extracted. Additionally, we extracted built environment
+data from OpenStreetMaps (https://www.openstreetmap.org/,
+OSM), including road hierarchies, land use, presence of
+cycling lanes, and urban furniture. In total, 192 urban elements
+are captured from OSM.
+Using both the semantic segmentation data and street-
+level data, we created potential image pairs by matching
+specific information. To accomplish this we begin by randomly
+selecting one image and randomly choosing eight possible
+environment characteristics (e.g., cars, vegetation, sidewalks,
+pedestrians, primary roads, cycling lanes, shops, traffic lights)
+from the set of 211 possible variables. Next, we look for
+other images that contain similar values of such characteristics,
+while allowing other variables to vary. After selecting the
+two images, we presented the pair to the participant. This
+fractional factorial design maximizes the information obtained
+from image pairs while reducing the number of experimental
+runs required, which would be unmanageable in a full factorial
+design. Finally, to ensure balanced exposure, we prioritized
+showing images that had been displayed fewer times in the
+past, so that all images were shown an equal number of times.
+B. PCS-Net
+Our model seeks to uncover the underlying patterns and
+principles that guide individuals’ subjective safety judgments
+when comparing and selecting between different images.
+Specifically, we seek to learn transformation function f (xi ) to
+predict an individual’s choice y when presented with images
+xi and x j . The models outlined here follow the rationale
+of the networks by [35], namely their classification and
+ranking networks. However, we modify these networks to
+better suit our problem and expand them to allow ties in
+comparisons as we find these can often bring information
+gain.
+Authorized licensed use limited to: National University of Singapore. Downloaded on June 24,2025 at 09:17:38 UTC from IEEE Xplore.  Restrictions apply. 1692 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025
+Fig. 2. Architectures of PCS-Net C (above) and PCS-Net R (below) and corresponding losses ( LC for PCS-Net C and L R and L1 for PCS-Net R), which,
+when combined, make up PCS-Net. Layer sizes are shown below each layer.
+1) Classification Problem: Given an individual’s choice y ∈
+{−1, 0, +1}, we want our model to predict said choice, i.e., the
+user chose the left image, a tie, or the right image. As such,
+we begin by designing the Classification-Perception of Cycling
+Safety Network (PCS-Net C ). Figure 2 shows the architecture
+of this network, which is divided into two sections: i) a feature
+extractor sub-network (backbone) and ii) a fusion network.
+The former is a Siamese-style network [55], where each
+identical branch with tied weights learns to map an input image
+to a latent representation of itself, acting as a feature extractor.
+Next, both branches are merged in the fusion sub-network[35],
+which in turn learns a combination of filters, ending with a
+softmax loss ( LC ) used to train the network.
+2) Ranking Problem: The main goal is to find a ranking
+score for each image, such that it represents an ordinal
+ranking among all images in the dataset. To make a prediction,
+ranking scores are compared between the two input images,
+and a choice is made following the highest-ranked image, i.e.,
+the one perceived as safer. To achieve this, a slightly different
+network is designed: Ranking-Perception of Cycling Safety
+Network (PCS-Net R), as shown in Figure 2. This network is
+subdivided into two components: i) a feature extractor sub-
+network (equal to the classification formulation) and ii) a
+ranking sub-network [35]. In essence, this sub-network uses
+fully connected layers to reduce the features extracted from
+the backbone to a ranking score for an input image. As such,
+we learn function f (xi ), such that when a choice y is made
+between xi and x j we want to satisfy
+−y · ( f (xi ) − f (x j )) >0, (1)
+with y ∈ {−1,+1}, with y = −1 for when image xi wins
+the comparison, and +1 if x j wins. In essence, f (x) ranks
+images based on their features, with higher-ranked images
+denoting images perceived safer for cycling. This problem can
+be expanded to denote a ranking loss:
+L ˆR(xi , x j ) = max(0, −y · ( f (xi ) − f (x j )) + γ ), (2)
+which also allows the introduction of a margin term γ . Using
+this loss function, we are essentially penalizing comparisons
+in which image ranking orders are opposite to the individual’s
+choice while favoring comparisons where a choice was made
+for an image ranked higher (perceived safer). However, L ˆR
+does not account for possible ties in a decision maker’s choice
+(y = 0). When a tie occurs, perceived cycling safety scores
+should be similar, as the respondent could not distinguish
+which one was deemed safer between the two images. This
+entails that both image rankings should be closer, which can
+be translated using a different loss for tie comparisons:
+L1(xi , x j ) = max(0, || f (xi ) − f (x j )||1 − γ ), (3)
+with | · |1 being the L1 norm. In essence, L1 pushes images
+from tie comparisons together. Finally, to train our model,
+we combine both losses and minimize:
+L R = 1 y∈{−1,+1}L ˆR + λ1 · 1 y∈{0}L1, (4)
+with 1 y∈{−1,+1} being an indicator function for non-tie com-
+parisons, 1 y∈{0} an indicator function for tie comparisons, and
+λ1 a weight term to modulate the importance of ties.
+3) Classification & Ranking Problem: Finally, we design
+an approach that combines both the classification and rank-
+ing tasks together. This approach learns in an end-to-end
+framework how to predict which of the two input images is
+considered safer for cycling. This Perception of Cycling Safety
+Network (PCS-Net) joins all the above architectures: i) feature
+extractor, ii) fusion, and iii) ranking sub-networks. Training is
+performed by minimizing the multi-loss function:
+L = LC + λ ˆR · 1 y∈{−1,+1}L ˆR + λ1 · 1 y∈{0}L1, (5)
+with λ ˆR and λ1 being hyper-parameters to be chosen to model
+loss component importance and maximize model accuracy.
+We experiment with different hyper-parameters in Section IV.
+IV. R ESULTS
+We now present the results from our work. Figure 3 shows
+our model training and validation framework. To showcase
+PCS-Net’s ability to capture perceived cycling safety from
+images, we use two datasets originating from human-evaluated
+cycling environment images (in addition to our own dataset
+Authorized licensed use limited to: National University of Singapore. Downloaded on June 24,2025 at 09:17:38 UTC from IEEE Xplore.  Restrictions apply. COSTA et al.: WHICH CYCLING ENVIRONMENT APPEARS SAFER? LEARNING CYCLING SAFETY PERCEPTIONS 1693
+Fig. 3. Framework used for model validation using human labelled data (semi-realistic and our real-world data). Data is split in training sets to train models A
+and B, which are evaluated on the development sets until convergence is met. Models A and B are then validated on unseen data (validation sets). The best
+performing model is then used for extrapolating perceived scores for unlabelled images at a city-wide scale in Section V.
+described in Section III-A, we use data adapted from [25])
+and estimate two models. In either dataset, we randomly
+split pairwise image comparisons in 70-10-20% for training,
+development, and validation (hold-out, test set).
+As typically done, we train both models using the training
+set and iteratively test them on the development set to uncover
+the best hyperparameters that produce the best model. The
+best performing model is then tested and validated on the
+validation set containing observations the model has not seen
+before. All results below pertain to the model’s results on
+the validation set. Unless otherwise stated, we compare our
+approach to other paired models that do not include ties
+using accuracy. We compute a non-margin accuracy metric
+for non-tie observations as the ratio of the correctly predicted
+left and right comparisons to all comparisons.
+All experiments used Python, PyTorch2 [56], and an
+NVIDIA GeForce 3080Ti GPU. Weights for the ranking
+and fusion sub-network were initialized from a uniform
+distribution relative to each layer’s size. Learning rate was
+set to 0.001, decaying every 10k steps, ADAM [57] as our
+optimization procedure, and a batch size of 128 and up to
+20 maximum epochs, or until validation accuracy stopped
+improving. We make all data and code publicly available
+online: https://github.com/mncosta/cycling_
+safety_subjective_learning_pairwise.
+A. Model A
+To validate our proposed model, we begin by using a
+dataset of semi-realistic images of 1900 computer-generated
+infrastructure typologies in Berlin [25]. The original data
+contains answers to an online survey where users were
+asked to assess their perception of safety using a 4-point
+scale. We adapted this dataset to our use case, transforming
+each judged image to pairwise comparisons following [58]’s
+approach. For each user, if image A was judged higher than
+B, we generated a comparison between A and B, where A was
+chosen. If both images were scored equally, then we generated
+a tie. We repeated this process for all users, resulting in
+∼2 million pairwise comparisons. We use these comparisons
+and images to train PCS-Net. We name the fitted model as
+Model A.
+Figure 4 showcases examples of images ranked by Model A,
+together with increasing (left to right) perceived safety scores.
+The left-most image depicts the lowest perceived environment,
+where a cyclist shares a road with tram rails and other traffic.
+On the opposite side, we can see a cyclist on a dedicated cycle
+lane as being perceived as very safe.
+We employ such a dataset given its vast amount of obser-
+vations, allowing us to compare our model to other pairwise
+comparison methods: TrueSkill [46], Elo [45], Gaussian Pro-
+cess [49], and Rank Centrality [59]. Table I shows the accuracy
+of our model versus other models, achieving comparable
+performance for the ranking models and a subpar perfor-
+mance for the classification task. Now, suppose we reduce the
+number of available average pairwise comparisons per image
+(effectively reducing the number of available comparisons).
+When constrained by the size of the training data, our model
+vastly outperforms the remaining pairwise models, as shown
+in Figure 5, reaching about 15% improved accuracy, which can
+be very beneficial when data acquired from surveys is low.
+B. Model B
+Next, we move to our work’s core results, which apply
+PCS-Net to real-world images and pairwise comparisons,
+as detailed in Section III-A. Data contains responses from
+251 users on images from Berlin on 7281 comparisons
+(3.3 average comparisons per image), of which 18% consist
+of ties.
+Authorized licensed use limited to: National University of Singapore. Downloaded on June 24,2025 at 09:17:38 UTC from IEEE Xplore.  Restrictions apply. 1694 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025
+Fig. 4. Examples of images ranked by their perceived safety scores. Ranked semi-realistic from model (top) A and real images from Model B (bottom) with
+increasing (left to right) perceived safety scores are shown.
+Fig. 5. Model accuracy with varying number of average comparisons for
+different paired models.
+TABLE I
+COMPARISON OF MODEL A VERSUS OTHER PAIRED
+COMPARISON MODELS
+We begin by comparing our approach versus other pairwise
+models to compare their performance in predicting which
+cycling environment appears safer. Again, we test our method
+against TrueSkill [46], Elo [45], Gaussian Process [49], and
+Rank Centrality [59], shown in Table II. As expected, given the
+low number of average pairwise comparisons per image avail-
+able in our data, PCS-Net outperforms competing approaches
+with a ∼17% improvement. This means that PCS-Net can
+effectively learn rankings directly from images, even when
+the number of available comparisons is limited.
+Next, we experiment with different network backbones (fea-
+ture extraction sub-network) and different model hyperparame-
+ters. Backbone networks (feature extractor sub-networks) were
+initialized using the pre-trained Imagenet weights available
+TABLE II
+COMPARISON OF MODEL B VERSUS OTHER PAIRED
+COMPARISON MODELS
+TABLE III
+MODEL B ACCURACY USING DIFFERENT BACKBONES , WITH AND
+WITHOUT DATA AUGMENTATION USING SEMI -REALISTIC DATA
+publicly: AlexNet [60], VGG [61], and ResNet [62]. Table III
+shows the model’s accuracy using different backbones. VGG
+achieves the highest accuracy, and it is closely followed
+by ResNet and AlexNet. Additionally, we test whether aug-
+menting our real image dataset by adding semi-realistic data
+improves model performance. For this, we train our model
+using a combination of real-world images and a similar-sized
+set of random semi-realistic pictures. Looking at the lower
+section of Table III, we see that results improve slightly, with
+the highest accuracy being achieved again with VGG. Thus,
+augmenting our dataset with semi-realistic image comparisons
+leads to better prediction accuracy.
+Next, we test the impact of including ties and use of the
+margin γ . Figure 6 shows the model’s accuracy over γ when
+PCS-Net is trained with and without ties. Additionally, we plot
+the default baseline when PCS-Net does not account for ties
+or margin effects (in blue) for comparison. When we set γ >
+0.4, the model trained with ties achieves an average 3% lower
+accuracy than the non-tie trained model’s accuracy.
+Authorized licensed use limited to: National University of Singapore. Downloaded on June 24,2025 at 09:17:38 UTC from IEEE Xplore.  Restrictions apply. COSTA et al.: WHICH CYCLING ENVIRONMENT APPEARS SAFER? LEARNING CYCLING SAFETY PERCEPTIONS 1695
+Fig. 6. PCS-Net accuracy trained with and without ties, for varying γ .
+Fig. 7. Average absolute error for misclassified observations between models
+trained with and without ties, for varying γ .
+So far, we have looked at model performance and compared
+them to approaches that either do not allow ties or do not
+include such additions easily. Yet, including ties allows partic-
+ipants not to choose a preference, when in fact there is none.
+More, knowing when there is no distinguishable difference
+between two images can be highly valuable in practice,
+informing planners and decision-makers which environments
+are perceived equally. To account for this aspect, we now
+compute a different accuracy metric to includeties as an output
+class and use γ to distinguish between ties and non-ties. This
+new metric is computed as the ratio of the correctly predicted
+left (i.e., f (xi ) >f (x j ) + γ ), right ( f (x j ) >f (xi ) + γ ), and
+tie (| f (xi ) − f (x j )| < γ) comparisons to all comparisons.
+It concedes an interval defined by γ when there is insuf-
+ficient rank difference between images. When this happens,
+we consider there is no noticeable difference between the two
+images, and the comparison is expected to result in a tie.
+Using this new, more general metric, one can rank images and
+simultaneously test whether a comparison is expected to result
+in a tie. We again test our models trained with and without
+ties and compute the new (3-class) accuracy and error rates
+for γ , achieving comparable results. However, analyzing the
+magnitude error of incorrectly classified observations (i.e., loss
+of misclassified observation) in Figure 7, the model trained
+with ties achieves an average absolute error much lower than
+Fig. 8. Rank difference distribution between tie and non-tie observations
+when PCS-Net is trained without (above) and with (below) ties, for γ = 0.7.
+Fig. 9. Average rank difference between images in comparisons for varying
+γ . We show the impact on the average rank difference between ties and
+non-ties observations.
+its non-ties trained counterpart. Moreover, the absolute error
+on wrongly classified images was relatively low (< 0.07) at
+its minimum (γ = 0.7), suggesting that even for misclassified
+comparisons, including ties leads to a lower error.
+Using this γ , one can also analyze the distribution of image
+rank differences for comparisons between a model trained with
+and without ties. Looking at Figure 8, the model incorporating
+ties (below) pushes ties below margin |γ | and non-ties above
+|γ |. In the model trained without ties, ties are much less
+distinct and are dispersed among the left and right options.
+Additionally, Figure 9 showcases the average rank differences
+in comparisons for different margins. Notably, the average
+difference for ties lies below γ whereas above γ for non-ties.
+This approach corroborates the idea of allowing participants to
+opt for ties to better reproduce their perceptions and improve
+their engagement in comparing images more carefully, as they
+are not forced to choose an option they are slightly unsure of.
+V. C ITY-WIDE APPLICATION
+To demonstrate how PCS-Net can be used to analyze
+the perceived cycling safety of an entire city, we computed
+perceived safety scores for the entire city of Berlin. To cover
+all of Berlin, we geographically sampled points using a 100m
+by 100m grid and projected them to the nearest cyclable path
+or road. We then retrieved street view images from Mapillary
+Authorized licensed use limited to: National University of Singapore. Downloaded on June 24,2025 at 09:17:38 UTC from IEEE Xplore.  Restrictions apply. 1696 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025
+Fig. 10. Map of perceived cycling safety throughout Berlin (a). Scaled perceived safety scores, from safer (blue) to unsafer (red), are shown for sampled
+images in Berlin. Two areas are selected and shown in greater detail in (b) and (c).
+for each point. We extracted 36,700 unlabelled images, which
+we then ran through the most accurate PCS-Net model to
+extrapolate their perceived scores. This gave us a perceived
+cycling safety score for each image in Berlin, which, for
+readability, we scaled between [0, 1].
+Figure 10 showcases the perceived safety scores for Berlin.
+As one would expect at the city-wide scale, scores are well
+distributed throughout the whole city. Taking a closer look
+(Figure 10.b), certain areas appear to be relatively perceived
+as safer (predominantly blue-ish, such as Berlin’s north and
+southeast) and seem to be more continuous. Examining the
+corresponding images, we see that these correspond to less
+urbanized areas where high levels of vegetation are visible in
+the images. In the center of the city (Figure 10.c), locations
+are not perceived as safe as before, with scores varying widely
+within a relatively small area, even on locations on the same
+road/street which exhibit changes in the levels of perception.
+Additionally, we perform a human evaluations to ensure
+that PCS-Net estimated scores on previously unseen Berlin
+images accurately and it portraits the right level of perceived
+safety. To this end, a set of images with scores ranging
+from 0 (minimum score) to 1 (maximum score) were retrieved
+and shown to users to assess. Overall, environments with a
+lower score were consistently evaluated poorly in terms of
+safety, average-scored environments were neither considered
+very safe nor very unsafe, and environments whose scores
+were predicted higher were considered safer by our human
+evaluators.
+On the whole, we showcase that there are several key
+hotspots for environments that are perceived as safe and
+Authorized licensed use limited to: National University of Singapore. Downloaded on June 24,2025 at 09:17:38 UTC from IEEE Xplore.  Restrictions apply. COSTA et al.: WHICH CYCLING ENVIRONMENT APPEARS SAFER? LEARNING CYCLING SAFETY PERCEPTIONS 1697
+unsafe, while at the same time, some high-level continuous
+hierarchy of perceived safety score seems to exist. From this,
+aggregate and disaggregate metrics can help planners and
+decision-makers highlight and prioritize urban environment
+changes to make cyclists’ trips more enjoyable and provide
+them with more comfortable ones to cycle in.
+VI. D ISCUSSION
+This work has focused on deriving cycling environments’
+perceived safety scores from pairwise comparisons. Pairwise
+image comparison surveys offer a systematic and quantitative
+approach to investigate visual preferences and individuals’
+perceptions, which can be used to quantify and categorize
+environments. Analyzing visual preferences from real-world
+images seeks to uncover the underlying patterns and principles
+that guide individuals’ subjective perceptions.
+Unlike most traditional paired models that ignore or avoid
+tied comparisons between two items, here we have included
+and underlined the importance of including ties. This follows
+the idea of the seminal work of [63], where ties matter and
+should be included to model comparisons when there is not
+enough difference between two items for a user’s sense of per-
+ception to note a difference. In addition, allowing participants
+to choose a tie potentially increases their engagement, resulting
+in more truthful choices and more accurate models. Moreover,
+with reference to the Weber-Fechner laws of psychophysics,
+which explore stimuli magnitudes and the ability to distinguish
+between two stimuli, it would be interesting to model which
+environmental factors influence users’ perceptions of cycling
+safety in such a way that they can distinguish between
+environments that appear safer for cycling. This knowledge
+could provide researchers with even more approaches to
+understanding the impact of different built environments on
+different cyclists.
+All in all, much of the work developed warrants that
+ties should not be discarded when available. Results-wise,
+including them results in comparable performance to non-ties-
+only models, meaning that they can be included without any
+loss. Even with the limited number of average comparisons per
+image, we are able to derive good prediction power, meaning
+that we can learn directly from the presented images and
+survey responses to capture cycling safety perceptions.
+Another aspect that could be explored is the use of
+transformer-style networks, as these have recently gained
+popularity in computer vision tasks (namely object detection,
+semantic segmentation, and other learning tasks) for their
+higher prediction accuracies. Yet, these are characterized by
+requiring more data and processing power than traditional
+convolutional-style networks. It would, however, be interesting
+to explore the power of transformers and other network
+configurations as more data on the perception of cycling safety
+together with street-view images becomes available.
+In practice, the approach we developed is extremely valu-
+able not only in research but also in practice for urban planners
+and decision-makers to adequately address cyclists’ needs
+in terms of sense of safety and comfort. New cities can
+employ a similar approach, deploying their own survey using
+specific city images and training a new PCS-Net specific to
+the city’s needs and perceptions. In essence, this would help
+identify city areas (i.e., specific hotspots, streets, intersections,
+or whole neighboorhoods) where cyclists feel unsafer. In turn,
+this would allow city urban planners and transport authorities
+to more efficiently understand how the perception of cycling
+safety affects cyclists at that particular location and design
+changes to improve cyclists’ sense of safety.
+A. Limitations
+The analysis and model present in this work have explored
+how the perception of cycling safety and scoring cycling
+environments can be made using a siamese-convolutional
+neural network and a pairwise image comparison survey. Yet,
+it is important to also acknowledge its limitations, especially
+given the social and health aspects it indirectly covers.
+First, it is important to consider that, despite our sample of
+images capturing various weather conditions, vehicle densities,
+lighting conditions, and road conditions, we could not account
+for all possible combinations and scenarios. For instance,
+while we included images with varying degrees of snow,
+vehicles (cars, bicycles, vans, trucks, buses) and pedestrians,
+images featuring sunny and cloudy depictions, as well as
+images during daytime, dawn, and dusk, other specific types
+of infrastructure that may limit visibility or alter cyclists’
+behavior and more rare typologies of environments were not
+frequently present. Expanding and including a wider variety
+of environments in the survey may help address these gaps
+and enhance PCS-Net’s validation across more contexts and
+environments. Directly accounting for specific external factors
+(e.g., weather conditions, different vehicles) is vital for urban
+planners and decision makers to effectively create environ-
+ments where cyclists feel safer. However, while such factors
+like weather were not directly controlled, from our results
+we believe PCS-Net has indirectly been able to account for
+some of such factors shown directly on images. In practice
+however, urban planners cannot change weather conditions;
+rather, they should consider their importance when designing
+and deploying new solutions. In turn, understanding how the
+built environment holistically may affect subjective safety may
+lead to more effective solutions to improve the sense of safety.
+Second, we have demonstrated how PCS-Net can be used to
+extrapolate city-wide perceived scores. While this application
+is highly valuable for transport and road safety authorities, it is
+not without limitations. It is important to acknowledge that
+there is no definitive ground truth to compare the estimated
+scores or pairwise comparisons against, i.e. a sample of
+subjective evaluations collected on-site, where images were
+taken, to fully validate the use of images as surrogates of
+the real environment. We expect differences to exist since the
+experience of cycling in the real environment involves dynamic
+stimuli not present in an image evaluation experiment. Still,
+as documented in previous literature, these have been used
+as proxies (Section II) and future fieldwork will be required
+to close the gap in our specific context. Nevertheless, in our
+model validation, PCS-Net exhibited similar out-of-sample
+prediction accuracy to in-sample testing. While these highlight
+the potential of PCS-Net in estimating individuals’ perception
+of safety, caution is warranted when applying PCS-Net to other
+Authorized licensed use limited to: National University of Singapore. Downloaded on June 24,2025 at 09:17:38 UTC from IEEE Xplore.  Restrictions apply. 1698 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025
+contexts, such as different neighborhoods, cities or countries
+where data was not available during training. Further analysis
+with larger and more comprehensive datasets is necessary to
+determine if the developed model can capture the general
+sense of safety perception across distinct and diverse settings.
+It is also important to assess whether PCS-Net can be used
+for knowledge transfer between cities with different cycling
+cultures and urban design philosophies.
+Third, another important limitation regards our model’s
+perception of safety scores when compared to in situ percep-
+tions cyclists may have. In this work, we have assumed the
+perception of safety to be captured directly from static images,
+which were correctly validated in themselves. However, we
+have not conducted any validation or comparison against safety
+perception data collected directly from cyclists on the road.
+Again, while PCS-Net presents itself as a novel and fast
+alternative to understanding the perception of safety at a large
+scale, care must be taken when directly assuming perceived
+scores on the road as PCS-Net does not account for urban
+dynamics or cyclists’ own actions, behaviour and beliefs,
+which can also affect how cyclists perceived safety around
+them. Similarly, while this work tackles subjective safety, care
+must also be taken when relating it to objective safety, i.e., the
+number or severity of cycling accidents. The relation between
+subjective and objective safety is still not fully understood in
+contexts where both follow similar trends and others where
+perceived safety seems to be the opposite of actual safety
+[64], [65], and thus caution must be exercised when trying
+to connect the two. Further work should analyse both how
+PCS-Net can be validated with in situ interviews and how its
+scores relate to actual safety.
+Fourth, to account for ties, we propose the use of margin
+γ to model imperceptible differences between two images.
+We used a fixed γ , which, in more general terms, may differ
+across individuals. Yet, estimating independent γ ’s for each
+user would allow for a better understanding of individual-
+level perceptions. Allowing for γ to vary, either through
+bootstrapping or other approaches, may be used to ably model
+heterogeneity at an individual level or for different cycling
+profiles. Additionally, accounting for different cycling profiles
+and understanding specific differences between profiles can
+help decision makers better tackle a group’s needs more effec-
+tively, similar to what Guan et al. [38] do for incorporating
+regional interactions and attribute correlations.
+VII. C ONCLUSION
+In this work, we have explored how cycling environment
+pictures can be ranked according to individuals’ perceptions of
+safety. We base our work on pairwise comparisons, presenting
+participants with pairs of images and asking them to indicate
+their preferred choice of which environment appears safer for
+cycling. We then developed a siamese-style neural network
+that cannot only rank images based on choices (left or right
+image chosen), but also incorporate ties, often overlooked and
+ignored in the literature. Our proposed methodology achieved
+good results, requiring fewer observations than current paired
+models, as knowledge can be directly driven from image
+features and individuals’ decisions. We extensively tested our
+approach on real-world data and real-world enriched data
+using synthetic images. Finally, we tested a city-wide appli-
+cation of our approach throughout Berlin.
+In the future, we plan to use the approach detailed here
+to analyze other cities and understand if the perception of
+safety can be generalized across cities with different urban
+characteristics or cycling cultures. Moreover, not only is under-
+standing what environments appear safer for cycling important,
+but knowing which of those environments’ characteristics
+increase or decrease the sense of safety is vital. As such,
+we aim to identify urban elements and quantify their impact
+on the perception of safety in finer detail. One possible
+practical application where such information could be used is
+in the understanding of cyclists’ route choices to verify how
+cyclists base their routes on safety perceptions. This may help
+urban planners design environments where cyclists feel safer.
+Another possible path forward is the use of cycling videos
+instead of static images. This approach could help researchers
+understand how temporal changes and more urban dynamics
+impact the perception of cycling safety. Finally, understanding
+the effect of individuals’ cycling profiles and how they per-
+ceive cycling safety differently can also be valuable to better
+address individuals’ needs.
+REFERENCES
+[1] P. Oja et al., “Health benefits of cycling: A systematic review,” Scandin.
+J. Med. Sci. Sports, vol. 21, no. 4, pp. 496–509, Aug. 2011.
+[2] T. Götschi, J. Garrard, and B. Giles-Corti, “Cycling as a part of daily life:
+A review of health perspectives,” Transp. Rev., vol. 36, no. 1, pp. 45–71,
+Jan. 2016.
+[3] J. Mason, L. Fulton, and Z. McDonald, “A global high shift cycling sce-
+nario: The potential for dramatically increasing bicycle and E-bike use in
+cities around the world, with estimated energy, CO 2, and cost impacts,”
+Inst. Transp. & Develop. Policy Univ. California, Davis, Tech. Rep.,
+Nov. 2015. [Online]. Available: https://ecf.com/sites/ecf.com/files/A-
+Global-High-Shift-Cycling-Scenario Nov-2015.pdf
+[4] A. Neves and C. Brand, “Assessing the potential for carbon emissions
+savings from replacing short car trips with walking and cycling using
+a mixed GPS-travel diary approach,” Transp. Res. A, Policy Pract.,
+vol. 123, pp. 130–146, May 2019.
+[5] E. Heinen, B. van Wee, and K. Maat, “Commuting by bicycle:
+An overview of the literature,” Transp. Rev., vol. 30, no. 1, pp. 59–96,
+Jan. 2010.
+[6] J. Pucher, “Cycling safety on bikeways vs. roads,” Transp. Quart.,
+vol. 55, no. 4, pp. 9–11, Jan. 2001.
+[7] M. A. Stinson and C. R. Bhat, “Frequency of bicycle commuting:
+Internet-based survey analysis,” Transp. Res. Record: J. Transp. Res.
+Board, vol. 1878, no. 1, pp. 122–130, Jan. 2004.
+[8] R. L. Sanders, “Perceived traffic risk for cyclists: The impact of near
+miss and collision experiences,” Accident Anal. Prevention, vol. 75,
+pp. 26–34, Feb. 2015.
+[9] R. Félix, F. Moura, and K. J. Clifton, “Maturing urban cycling:
+Comparing barriers and motivators to bicycle of cyclists and non-
+cyclists in Lisbon, Portugal,” J. Transp. Health, vol. 15, Dec. 2019,
+Art. no. 100628.
+[10] A. R. Lawson, V . Pakrashi, B. Ghosh, and W. Y . Szeto, “Perception of
+safety of cyclists in Dublin city,” Accident Anal. Prevention, vol. 50,
+pp. 499–511, Jan. 2013.
+[11] R. Aldred and J. Woodcock, “Reframing safety: An analysis of percep-
+tions of cycle safety clothing,” Transp. Policy, vol. 42, pp. 103–112,
+Aug. 2015.
+[12] N. Chaurand and P. Delhomme, “Cyclists and drivers in road interac-
+tions: A comparison of perceived crash risk,” Accident Anal. Prevention,
+vol. 50, pp. 1176–1184, Jan. 2013.
+[13] M. Møller and T. Hels, “Cyclists’ perception of risk in roundabouts,”
+Accident Anal. Prevention, vol. 40, no. 3, pp. 1055–1062, May 2008.
+[14] K. Wang and G. Akar, “The perceptions of bicycling intersection
+safety by four types of bicyclists,” Transp. Res. Part F , Traffic Psychol.
+Behaviour, vol. 59, pp. 67–80, Nov. 2018.
+Authorized licensed use limited to: National University of Singapore. Downloaded on June 24,2025 at 09:17:38 UTC from IEEE Xplore.  Restrictions apply. COSTA et al.: WHICH CYCLING ENVIRONMENT APPEARS SAFER? LEARNING CYCLING SAFETY PERCEPTIONS 1699
+[15] E. S. Chataway, S. Kaplan, T. A. S. Nielsen, and C. G. Prato, “Safety
+perceptions and reported behavior related to cycling in mixed traffic:
+A comparison between Brisbane and Copenhagen,” Transp. Res. F ,
+Traffic Psychol. Behav., vol. 23, pp. 32–43, Mar. 2014.
+[16] S. U. Jensen, C. Rosenkilde, and N. Jensen, “Road safety and perceived
+risk of cycle facilities in Copenhagen,” Presentation to AGM Eur.
+Cyclists Federation, 2007, pp. 1–9.
+[17] M. Graystone, R. Mitra, and P. M. Hess, “Gendered perceptions of
+cycling safety and on-street bicycle infrastructure: Bridging the gap,”
+Transp. Res. D, Transp. Environ., vol. 105, Apr. 2022, Art. no. 103237.
+[18] V . D. Pyrialakou, C. Gkartzonikas, J. D. Gatlin, and K. Gkritza,
+“Perceptions of safety on a shared road: Driving, cycling, or walking
+near an autonomous vehicle,” J. Safety Res. , vol. 72, pp. 249–258,
+Feb. 2020.
+[19] A. Ng, A. K. Debnath, and K. C. Heesch, “Cyclist’ safety perceptions
+of cycling infrastructure at un-signalised intersections: Cross-sectional
+survey of Queensland cyclists,” J. Transp. Health, vol. 6, pp. 13–22,
+Sep. 2017.
+[20] J. Bosen, H. E. Fuchte, and C. Leicht-Scholten, “Cycling to work and
+making cycling work: What makes committed utility cyclists despite
+perceived risks of air pollution and traffic?” J. Transp. Health, vol. 28,
+Jan. 2023, Art. no. 101519.
+[21] P. Zeile, B. Resch, M. Loidl, A. Petutschnig, and L. Dörrzapf, “Urban
+emotions and cycling experience-enriching traffic planning for cyclists
+with human sensor data,” GI_Forum, vol. 2016, no. 1, pp. 16–204, 2016.
+[22] J. Parkin, M. Wardman, and M. Page, “Models of perceived cycling
+risk and route acceptability,” Accident Anal. Prevention, vol. 39, no. 2,
+pp. 364–371, Mar. 2007.
+[23] R. Manton, H. Rau, F. Fahy, J. Sheahan, and E. Clifford, “Using mental
+mapping to unpack perceived cycling risk,” Accident Anal. Prevention,
+vol. 88, pp. 138–149, Mar. 2016.
+[24] R. von Stülpnagel and J. Krukar, “Risk perception during urban cycling:
+An assessment of crowdsourced and authoritative data,” Accident Anal.
+Prevention, vol. 121, pp. 109–117, Dec. 2018.
+[25] R. von Stülpnagel and N. Binnig, “How safe do you feel?—A large-
+scale survey concerning the subjective safety associated with different
+kinds of cycling lanes,” Accident Anal. Prevention, vol. 167, Mar. 2022,
+Art. no. 106577.
+[26] S. Schmidt and R. von Stülpnagel, “Risk perception and gaze behavior
+during urban cycling—A field study,” in Proc. 3rd Int. Workshop Eye
+Tracking Spatial Res., 2018.
+[27] A. Sorton and T. Walsh, “Bicycle stress level as a tool to evaluate urban
+and suburban bicycle compatibility,” Transp. Res. Board, no. 1438, pp.
+17–24, 1994.
+[28] M. C. Mekuria, P. G. Furth, and H. Nixon, “Low-stress bicycling
+and network connectivity,” Mineta Transp. Inst., Tech. Rep. CA-
+MTI-12-1005, May 2012. [Online]. Available: https://transweb.sjsu.edu/
+sites/default/files/1005-low-stress-bicycling-network-connectivity.pdf
+[29] P. Furth, “Level of traffic stress criteria for road segments, version 2.0,”
+Northeastern Univ. College Eng., Boston, MA, USA, Tech. Rep., 2017.
+[30] K. Ito and F. Biljecki, “Assessing bikeability with street view imagery
+and computer vision,” Transp. Res. C, Emerg. Technol., vol. 132,
+Nov. 2021, Art. no. 103371.
+[31] X. Li, C. Ratti, and I. Seiferling, “Quantifying the shade provision of
+street trees in urban landscape: A case study in Boston, USA, using
+Google street view,” Landscape Urban Planning, vol. 169, pp. 81–91,
+Jan. 2018.
+[32] A. Toikka, E. Willberg, V . Mäkinen, T. Toivonen, and J. Oksanen,
+“The green view dataset for the capital of Finland, Helsinki,” Data Brief,
+vol. 30, Jun. 2020, Art. no. 105601.
+[33] A. Nouriani and L. Lemke, “Vision-based housing price estimation using
+interior, exterior & satellite images,” Intell. Syst. with Appl., vol. 14,
+May 2022, Art. no. 200081.
+[34] N. Naik, J. Philipoom, R. Raskar, and C. Hidalgo,
+“Streetscore—Predicting the perceived safety of one million
+streetscapes,” in Proc. IEEE Conf. Comput. Vis. Pattern Recognit.
+Workshops, Jun. 2014, pp. 793–799.
+[35] A. Dubey, N. Naik, D. Parikh, R. Raskar, and C. A. Hidalgo, “Deep
+learning the city: Quantifying urban perception at a global scale,”
+in Proc. 14th Eur. Conf. Comput. Vis. (ECCV), Amsterdam, The
+Netherlands. Cham, Switzerland: Springer, Jan. 2016, pp. 196–212.
+[36] D. Verma, A. Jana, and K. Ramamritham, “Predicting human perception
+of the urban environment in a spatiotemporal urban setting using locally
+acquired street view images and audio clips,”Building Environ., vol. 186,
+Dec. 2020, Art. no. 107340.
+[37] T. Ramírez, R. Hurtubia, H. Lobel, and T. Rossetti, “Measuring het-
+erogeneous perception of urban space with massive data and machine
+learning: An application to safety,”Landscape Urban Planning, vol. 208,
+Apr. 2021, Art. no. 104002.
+[38] W. Guan, Z. Chen, F. Feng, W. Liu, and L. Nie, “Urban perception:
+Sensing cities via a deep interactive multi-task learning framework,”
+ACM Trans. Multimedia Comput., Commun., Appl., vol. 17, no. 1s,
+pp. 1–20, Jan. 2021.
+[39] L. Najafizadeh and J. E. Froehlich, “A feasibility study of using Google
+street view and computer vision to track the evolution of urban accessi-
+bility,” in Proc. 20th Int. ACM SIGACCESS Conf. Comput. Accessibility,
+Oct. 2018, pp. 340–342.
+[40] M. Saha et al., “Project sidewalk: A web-based crowdsourcing tool for
+collecting sidewalk accessibility data at scale,” in Proc. CHI Conf. Hum.
+Factors Comput. Syst., May 2019, pp. 1–14.
+[41] W. Song et al., “FARSA: Fully automated roadway safety assessment,”
+in Proc. IEEE Winter Conf. Appl. Comput. Vis. (WACV), Mar. 2018,
+pp. 521–529.
+[42] L. L. Thurstone, “A law of comparative judgment.,” Psychol. Rev.,
+vol. 101, no. 2, pp. 266–270, 1994.
+[43] R. A. Bradley and M. E. Terry, “Rank analysis of incomplete block
+designs: I. The method of paired comparisons,” Biometrika, vol. 39,
+nos. 3–4, pp. 324–345, 1952.
+[44] H. Ding, J. Gao, Y . Yuan, and Q. Wang, “An end-to-end contrastive
+license plate detector,” IEEE Trans. Intell. Transp. Syst., vol. 25, no. 1,
+pp. 503–516, Jan. 2024.
+[45] A. Elo, The Rating of Chessplayers, Past and Present. New York, NY ,
+USA: Arco Pub., 1978.
+[46] R. Herbrich, T. Minka, and T. Graepel, “TrueSkillT: A Bayesian skill
+rating system,” in Adv. Neural Inf. Process., vol. 19, 2006, pp. 569–576.
+[47] S. L. Chau, M. Cucuringu, and D. Sejdinovic, “Spectral ranking
+with covariates,” in Proc. Eur. Conf Mach. Learn. Knowl. Discovery
+Databases, Grenoble, France. Cham, Switzerland: Springer, Sep. 2022,
+pp. 70–86.
+[48] L. Xu, J. Li, W. Lin, Y . Zhang, Y . Zhang, and Y . Yan, “Pairwise
+comparison and rank learning for image quality assessment,” Displays,
+vol. 44, pp. 21–26, Sep. 2016.
+[49] L. Maystre, V . Kristof, and M. Grossglauser, “Pairwise comparisons with
+flexible time-dynamics,” in Proc. 25th ACM SIGKDD Int. Conf. Knowl.
+Discovery Data Mining, Jul. 2019, pp. 1236–1246.
+[50] M. Engilberge, L. Chevallier, P. Pérez, and M. Cord, “SoDeep: A sorting
+deep net to learn ranking loss surrogates,” in Proc. IEEE/CVF Conf.
+Comput. Vis. Pattern Recognit. (CVPR), Jun. 2019, pp. 10784–10793.
+[51] J. Dill and N. McNeil, “Revisiting the four types of cyclists: Findings
+from a national survey,” Transp. Res. Rec., J. Transp. Res. Board,
+vol. 2587, no. 1, pp. 90–99, Jan. 2016.
+[52] R. Geller, “Four types of cyclists,” Portland Bur. Transp., Portland, OR,
+USA, Tech. Rep., 2006.
+[53] M. Perez-Ortiz and R. K. Mantiuk, “A practical guide and software for
+analysing pairwise comparison experiments,” 2017, arXiv:1712.03686.
+[54] Y . Yuan, X. Chen, X. Chen, and J. Wang, “Segmentation transformer:
+Object-contextual representations for semantic segmentation,” 2019,
+arXiv:1909.11065.
+[55] S. Chopra, R. Hadsell, and Y . LeCun, “Learning a similarity metric
+discriminatively, with application to face verification,” in Proc. IEEE
+Comput. Soc. Conf. Comput. Vis. Pattern Recognit. (CVPR), Jun. 2005,
+pp. 539–546.
+[56] A. Paszke et al., “PyTorch: An imperative style, high-performance
+deep learning library,” in Proc. NIPS, H. Wallach, H. Larochelle,
+A. Beygelzimer, F. d’Alché Buc, E. Fox, and R. Garnett, Eds. Red Hook,
+NY , USA: Curran Associates, Dec. 2019, pp. 8024–8035.
+[57] D. P. Kingma and J. Ba, “Adam: A method for stochastic optimization,”
+2014, arXiv:1412.6980.
+[58] R. Dittrich, B. Francis, R. Hatzinger, and W. Katzenbeisser, “A paired
+comparison approach for the analysis of sets of likert-scale responses,”
+Stat. Model., vol. 7, no. 1, pp. 3–28, Apr. 2007.
+[59] S. Negahban, S. Oh, and D. Shah, “Iterative ranking from pair-wise
+comparisons,” in Proc. Neural Inf. Process. Syst., vol. 25, Dec. 2012,
+pp. 2474–2482.
+[60] A. Krizhevsky, I. Sutskever, and G. E. Hinton, “ImageNet classification
+with deep convolutional neural networks,” in Proc. Adv. Neural Inf.
+Process., vol. 25. Red Hook, NY , USA: Curran Associates, 2012.
+[61] K. Simonyan and A. Zisserman, “Very deep convolutional networks for
+large-scale image recognition,” 2014, arXiv:1409.1556.
+Authorized licensed use limited to: National University of Singapore. Downloaded on June 24,2025 at 09:17:38 UTC from IEEE Xplore.  Restrictions apply. 1700 IEEE TRANSACTIONS ON INTELLIGENT TRANSPORTATION SYSTEMS, VOL. 26, NO. 2, FEBRUARY 2025
+[62] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image
+recognition,” 2015, arXiv:1512.03385.
+[63] P. V . Rao and L. L. Kupper, “Ties in paired-comparison experiments:
+A generalization of the bradley-terry model,” J. Amer. Stat. Assoc.,
+vol. 62, no. 317, p. 194, Mar. 1967.
+[64] M. Winters et al., “Safe cycling: How do risk perceptions compare with
+observed risk?” Can. J. Public Health, vol. 103, no. S3, pp. S42–S47,
+Nov. 2012.
+[65] R. von Stülpnagel, C. Petinaud, and S. Lißner, “Crash risk and subjective
+risk perception during urban cycling: Accounting for cycling volume,”
+Accident Anal. Prevention, vol. 164, Jan. 2022, Art. no. 106470.
+Miguel Costa received the M.Sc. degree in electrical and computer engi-
+neering from the Instituto Superior Técnico (IST), University of Lisbon, and
+the Ph.D. degree in transportation systems from the University of Lisbon in
+2024. He is a Post-Doctoral Researcher with the Department of Technology,
+Management, and Economics, Technical University of Denmark (DTU). His
+research focuses on understanding and predicting how cyclists’ objective
+and subjective safety is influenced by the context, where cyclists cycle and
+the surrounding built environment and how to use reinforcement learning
+for finding optimal climate adaptation policies by integrating dynamic links
+between flooding events, transport, health, and wellbeing.
+Manuel Marques received the Ph.D. degree in electrical and computer
+engineering from IST in 2011. He is a Researcher with the Electrical and
+Computer Engineering Department, IST, and the Instituto de Sistemas e
+Robótica, LARSyS. His main area of research is computer vision, with a
+special interest in 3-D reconstruction, video processing object recognition,
+and pose estimation. Recently, he focused on applications to assistive robotics
+and transportation, in particular cycling mobility.
+Carlos Lima Azevedo received the B.Sc. degree in structural engineering and
+the M.Sc. and Ph.D. degrees from the University of Lisbon, in 2004, 2008,
+and 2014, respectively. He is an Associate Professor with the Department
+of Technology, Management, and Economics, DTU; and a Research Affiliate
+of ITSLab, Massachusetts Institute of Technology (MIT). He is an expert
+in the development of new models and simulation techniques for smart
+mobility design and assessment, which includes developing and applying
+large-scale agent-based urban simulation for the design and evaluation of
+shared automated vehicles on-demand and personalized real-time incentive
+systems; individual behavior experiments and preferences modeling toward
+new mobility solutions and innovative road safety assessment models.
+Felix Wilhelm Siebert received the Ph.D. degree in transport psychology.
+He is an Assistant Professor with the Human Behavior Section, Department
+of Technology, Management, and Economics, DTU. His main research interest
+is the safety-related behavior of vulnerable road users. In current work,
+he applies computer vision approaches to video data for the automated
+detection of safety-related behavior of road users.
+Filipe Moura is an Associate Professor with Habilitation in transportation
+with the Department of Civil Engineering and Architecture, IST. He is the
+Head of the U-Shift Laboratory, Transport Systems Research Group, CERIS.
+He is distinguished as a Fulbright Scholar. His main research expertise is
+on urban mobility, focusing on analyzing travel behavior, transport modeling,
+and sustainable mobility. His endeavors emphasize active modes and their
+interactions within the urban environment and explore autonomy within urban
+mobility (from both behavioral and technological perspectives).
+Authorized licensed use limited to: National University of Singapore. Downloaded on June 24,2025 at 09:17:38 UTC from IEEE Xplore.  Restrictions apply. 
