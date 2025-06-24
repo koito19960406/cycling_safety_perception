@@ -1006,16 +1006,18 @@ class PostModelingAnalyzer:
     
     def _create_image_grid_figure_with_cam(self, merged_data, grouping_col, unique_groups, n_groups, figure_num, title):
         """Helper function to create image grid with Grad-CAM overlays."""
-        n_cols = 5
+        n_cols = 3
         n_image_cols = n_cols * 2
         
-        fig, axes = plt.subplots(n_groups, n_image_cols + 1, figsize=(30, 3 * n_groups), 
+        fig, axes = plt.subplots(n_groups, n_image_cols + 1, figsize=(18, 3 * n_groups), 
                                  gridspec_kw={'width_ratios': [1.5] + [1]*n_image_cols})
         if n_groups == 1:
             axes = axes.reshape(1, -1)
         
         # fig.suptitle(title, fontsize=20, fontweight='bold', y=0.98)
         
+        col_names = ["Minimum", "Median", "Maximum"]
+
         for row, group_val in enumerate(unique_groups):
             group_data = merged_data[merged_data[grouping_col] == group_val].sort_values('safety_score')
             
@@ -1024,34 +1026,32 @@ class PostModelingAnalyzer:
             axes[row, 0].axis('off')
             
             if len(group_data) >= n_cols:
-                quantiles = np.linspace(0, 1, n_cols + 1)
+                images_to_plot = [
+                    group_data.iloc[0],  # Minimum
+                    group_data.iloc[len(group_data) // 2],  # Median
+                    group_data.iloc[-1]  # Maximum
+                ]
+                
                 for col in range(n_cols):
                     ax_segmented = axes[row, 1 + 2 * col]
                     ax_gradcam = axes[row, 1 + 2 * col + 1]
                     
                     if row == 0:
-                        ax_segmented.set_title("Segmented", fontsize=22)
-                        ax_gradcam.set_title("Grad-CAM", fontsize=22)
+                        ax_segmented.set_title(f"Segmented\n({col_names[col]})", fontsize=20)
+                        ax_gradcam.set_title(f"Grad-CAM\n({col_names[col]})", fontsize=20)
 
-                    q_start, q_end = quantiles[col], quantiles[col+1]
-                    start_idx, end_idx = int(q_start * len(group_data)), int(q_end * len(group_data))
-                    if end_idx == start_idx: end_idx += 1
+                    sampled = images_to_plot[col]
+                    img_name, score = sampled['image_name'], sampled['safety_score']
+                        
+                    seg_img = self.load_and_resize_image(img_name, use_segmented=True)
+                    cam_img = self.load_gradcam_overlay(img_name)
                     
-                    quantile_data = group_data.iloc[start_idx:end_idx]
+                    ax_segmented.imshow(seg_img if seg_img else self._create_placeholder("Not Found"))
+                    ax_gradcam.imshow(cam_img if cam_img else self._create_placeholder("No CAM"))
                     
-                    if len(quantile_data) > 0:
-                        sampled = quantile_data.sample(n=1).iloc[0]
-                        img_name, score = sampled['image_name'], sampled['safety_score']
-                        
-                        seg_img = self.load_and_resize_image(img_name, use_segmented=True)
-                        cam_img = self.load_gradcam_overlay(img_name)
-                        
-                        ax_segmented.imshow(seg_img if seg_img else self._create_placeholder("Not Found"))
-                        ax_gradcam.imshow(cam_img if cam_img else self._create_placeholder("No CAM"))
-                        
-                        ax_segmented.text(0.05, 0.95, f'{score:.3f}', transform=ax_segmented.transAxes, 
-                                          ha='left', va='top', color='white', fontsize=12,
-                                          bbox=dict(facecolor='black', alpha=0.5, pad=2))
+                    ax_segmented.text(0.05, 0.95, f'{score:.3f}', transform=ax_segmented.transAxes, 
+                                      ha='left', va='top', color='white', fontsize=12,
+                                      bbox=dict(facecolor='black', alpha=0.5, pad=2))
                     
                     ax_segmented.axis('off')
                     ax_gradcam.axis('off')
@@ -1060,20 +1060,23 @@ class PostModelingAnalyzer:
                     axes[row, 1+col].axis('off')
         
         plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-        fig_path = self.output_dir / f'figure_{figure_num}_image_grid_by_{grouping_col}_with_cam.png'
+        fig_path = self.output_dir / f'figure_{figure_num}_image_grid_by_{grouping_col}_en_with_cam.png'
         plt.savefig(fig_path, dpi=300, bbox_inches='tight')
         print(f"Figure {figure_num} with CAM saved to: {fig_path}")
         plt.close()
 
     def _create_image_grid_figure_without_cam(self, merged_data, grouping_col, unique_groups, n_groups, figure_num, title):
         """Helper function to create image grid without Grad-CAM overlays (original logic)."""
-        n_cols = 5
-        fig, axes = plt.subplots(n_groups, n_cols + 1, figsize=(18, 3 * n_groups))
+        n_cols = 3
+        fig, axes = plt.subplots(n_groups, n_cols + 1, figsize=(12, 3 * n_groups),
+                                 gridspec_kw={'width_ratios': [1.5] + [1]*n_cols})
         if n_groups == 1:
             axes = axes.reshape(1, -1)
         
-        fig.suptitle(title, fontsize=20, fontweight='bold', y=0.98)
+        # fig.suptitle(title, fontsize=20, fontweight='bold', y=0.98)
         
+        col_names = ["Minimum", "Median", "Maximum"]
+
         for row, group_val in enumerate(unique_groups):
             group_data = merged_data[merged_data[grouping_col] == group_val].sort_values('safety_score')
             
@@ -1082,22 +1085,25 @@ class PostModelingAnalyzer:
             axes[row, 0].axis('off')
             
             if len(group_data) >= n_cols:
-                quantiles = np.linspace(0, 1, n_cols + 1)
+                images_to_plot = [
+                    group_data.iloc[0],  # Minimum
+                    group_data.iloc[len(group_data) // 2],  # Median
+                    group_data.iloc[-1]  # Maximum
+                ]
+
                 for col in range(n_cols):
                     ax = axes[row, col + 1]
-                    q_start, q_end = quantiles[col], quantiles[col+1]
-                    start_idx, end_idx = int(q_start * len(group_data)), int(q_end * len(group_data))
-                    if end_idx == start_idx: end_idx += 1
+
+                    if row == 0:
+                        ax.set_title(col_names[col], fontsize=14, fontweight='bold')
+
+                    sampled = images_to_plot[col]
+                    img_name, score = sampled['image_name'], sampled['safety_score']
                     
-                    quantile_data = group_data.iloc[start_idx:end_idx]
+                    img = self.load_and_resize_image(img_name, use_segmented=True)
+                    ax.imshow(img if img else self._create_placeholder("Not Found"))
                     
-                    if len(quantile_data) > 0:
-                        sampled = quantile_data.sample(n=1).iloc[0]
-                        img_name, score = sampled['image_name'], sampled['safety_score']
-                        
-                        img = self.load_and_resize_image(img_name, use_segmented=True)
-                        ax.imshow(img if img else self._create_placeholder("Not Found"))
-                        ax.set_title(f'{score:.3f}', fontsize=12, fontweight='bold')
+                    ax.text(0.5, -0.15, f'{score:.3f}', transform=ax.transAxes, ha='center', fontsize=12)
                     
                     ax.axis('off')
             else:
@@ -1105,7 +1111,7 @@ class PostModelingAnalyzer:
                     axes[row, col+1].axis('off')
         
         plt.tight_layout()
-        fig_path = self.output_dir / f'figure_{figure_num}_image_grid_by_{grouping_col}.png'
+        fig_path = self.output_dir / f'figure_{figure_num}_image_grid_by_{grouping_col}_en.png'
         plt.savefig(fig_path, dpi=300, bbox_inches='tight')
         print(f"Figure {figure_num} saved to: {fig_path}")
         plt.close()
