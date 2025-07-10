@@ -63,7 +63,7 @@ class SafetyDemographicsInteractionModel:
             'B_UTILITY_POLE': 'Utility Pole'
         }
         
-        self.num_draws = 5
+        self.num_draws = 1000
         self.individual_id = 'RID'
         self.min_obs_per_individual = 15
         
@@ -341,7 +341,7 @@ class SafetyDemographicsInteractionModel:
 def main():
     parser = argparse.ArgumentParser(description='Run Safety-Demographics Interaction Model (MXL)')
     parser.add_argument('--model_path', type=str, 
-                        default='reports/models/mxl_choice_20250708_181840/final_full_model.pickle',
+                        default='reports/models/mxl_choice_20250709_183213/final_full_model.pickle',
                         help='Path to the trained base model pickle file')
     args = parser.parse_args()
     
