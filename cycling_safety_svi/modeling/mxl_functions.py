@@ -175,7 +175,7 @@ def prepare_panel_data(dataframe, individual_id='RID', choice_var='CHOICE', feat
     biodata.panel(individual_id)
     
     # Calculate the number of observations per individual
-    obs_per_ind = dataframe[individual_id].value_counts().iloc[0]
+    obs_per_ind = df_clean[individual_id].value_counts().iloc[0]
     print(f'Number of observations per individual: {obs_per_ind}')
     
     # Create wide format database

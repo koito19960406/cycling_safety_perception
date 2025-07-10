@@ -453,10 +453,10 @@ class ChoiceModelBenchmark:
         
         for feature in seg_features:
             attributes.extend([f"{feature}_1", f"{feature}_2"])
-            
+        
         if 'SAFETY_SCORE' in features:
             attributes.extend(['safety_score_1', 'safety_score_2'])
-
+        
         model_data = self.merged_data[attributes].copy().dropna()
         model_data = model_data.rename(columns={
             'safety_score_1': 'SAFETY_SCORE1',
@@ -647,7 +647,7 @@ class ChoiceModelBenchmark:
             f.write(latex_content)
         
         print(f"LaTeX table saved to {table_path}")
-
+    
 def main():
     """Main function to run the choice model benchmark"""
     
@@ -670,4 +670,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main() 

@@ -4,7 +4,7 @@ Safety-Demographics Interaction Model (Mixed Logit Version)
 This script extends a trained choice model with safety * demographics interaction effects.
 It uses a mixed logit (MXL) formulation, where TT, TL, and SAFETY_SCORE are random parameters.
 The script takes a trained model as input to ensure the same segmentation features are used.
-It adds trippurpose and triptime as demographic variables.
+It adds trippurpose and traveltime as demographic variables.
 
 Usage:
     python safety_demographics_interaction_model.py --model_path /path/to/final_model.pickle
@@ -54,7 +54,7 @@ class SafetyDemographicsInteractionModel:
             'gender': {1: 'male', 2: 'female', 3: 'other'},
             'education': {}, 'income': {}, 'cyclingincident': {}, 'cycler': {},
             'cyclinglike': {}, 'cyclingunsafe': {}, 'biketype': {}, 'work': {},
-            'car': {}, 'trippurpose': {}, 'triptime': {}
+            'car': {}, 'trippurpose': {}, 'traveltime': {}
         }
         
         self.feature_name_mapping = {
@@ -63,8 +63,9 @@ class SafetyDemographicsInteractionModel:
             'B_UTILITY_POLE': 'Utility Pole'
         }
         
-        self.num_draws = 500
+        self.num_draws = 5
         self.individual_id = 'RID'
+        self.min_obs_per_individual = 15
         
     def load_trained_model_data(self):
         """Load the trained model and extract its data and structure"""
@@ -89,7 +90,7 @@ class SafetyDemographicsInteractionModel:
                 feature_name = self.feature_name_mapping.get(param_name, param_name.replace('B_', ''))
                 segmentation_features.append(feature_name)
         return segmentation_features
-
+        
     def load_and_prepare_data(self, 
                              cv_dcm_path='data/raw/cv_dcm.csv',
                              database_path='data/raw/database_2024_10_07_135133.db',
@@ -98,6 +99,15 @@ class SafetyDemographicsInteractionModel:
         """Load and prepare all datasets with enhanced demographics and segmentation"""
         print("\nLoading and preparing all datasets...")
         self.choice_data = pd.read_csv(cv_dcm_path)
+        
+        print("\nApplying data cleaning steps...")
+        self.choice_data = apply_data_cleaning(
+            self.choice_data, 
+            individual_id=self.individual_id,
+            min_obs=self.min_obs_per_individual,
+            fix_problematic_rid=True
+        )
+
         self._load_enhanced_demographics(database_path)
         self.safety_scores = pd.read_csv(safety_scores_path)
         self.safety_scores['image_name'] = self.safety_scores['image_name'].str.strip()
@@ -109,11 +119,11 @@ class SafetyDemographicsInteractionModel:
         else:
             self.segmentation_data = None
             print("No segmentation features in base model, skipping segmentation data.")
-
+        
         self._merge_all_datasets()
         self._process_demographics()
         print(f"Final dataset prepared with {len(self.merged_data)} observations.")
-
+        
     def _load_enhanced_demographics(self, database_path):
         """Load enhanced demographics from database including new variables."""
         print("Loading enhanced demographics from database...")
@@ -126,14 +136,14 @@ class SafetyDemographicsInteractionModel:
             self.demographics = pd.read_sql_query(query, conn)
         except Exception as e:
             print(f"Database query failed, likely missing columns: {e}")
-            print("Attempting to load without trippurpose and triptime...")
+            print("Attempting to load without trippurpose and traveltime...")
             demographic_cols.remove('trippurpose')
-            demographic_cols.remove('triptime')
+            demographic_cols.remove('traveltime')
             query = f"SELECT respondent_id, set_id, {', '.join(demographic_cols)} FROM Response WHERE age IS NOT NULL AND gender IS NOT NULL"
             self.demographics = pd.read_sql_query(query, conn)
-
+        
         conn.close()
-
+        
         for col in self.demographics.columns:
             if col in self.demographic_mappings and col not in ['age', 'gender']:
                 counts = self.demographics[col].value_counts().sort_index()
@@ -141,18 +151,25 @@ class SafetyDemographicsInteractionModel:
                 unique_vals = sorted([x for x in self.demographics[col].unique() if pd.notna(x)])
                 self.demographic_mappings[col] = {val: f'{col}_{int(val)}' for val in unique_vals}
                 print(f"Created mapping for {col}: {self.demographic_mappings[col]}")
-
+        # drop any rows with NaN in demographics
+        self.demographics.dropna(subset=demographic_cols, inplace=True)
+        # For set_id == 63, there are two rows with the same RID. Set the second one's set_id to 63999
+        mask = self.demographics['set_id'] == 63
+        idx = self.demographics[mask].index
+        if len(idx) > 1:
+            self.demographics.at[idx[1], 'set_id'] = 63999
+    
     def _merge_all_datasets(self):
         """Merge all datasets into a single dataframe for modeling."""
         merged_data = self.choice_data.merge(self.demographics, left_on='RID', right_on='set_id', how='inner')
         
         safety_dict = dict(zip(self.safety_scores['image_name'], self.safety_scores['safety_score']))
-        merged_data['safety_score_1'] = merged_data['IMG1'].map(safety_dict)
-        merged_data['safety_score_2'] = merged_data['IMG2'].map(safety_dict)
+        merged_data['SAFETY_SCORE_1'] = merged_data['IMG1'].map(safety_dict)
+        merged_data['SAFETY_SCORE_2'] = merged_data['IMG2'].map(safety_dict)
         mean_safety = self.safety_scores['safety_score'].mean()
-        merged_data['safety_score_1'].fillna(mean_safety, inplace=True)
-        merged_data['safety_score_2'].fillna(mean_safety, inplace=True)
-
+        merged_data['SAFETY_SCORE_1'].fillna(mean_safety, inplace=True)
+        merged_data['SAFETY_SCORE_2'].fillna(mean_safety, inplace=True)
+        
         if self.segmentation_data is not None:
             segmentation_dict = {row['filename_key'] + '.jpg': row.drop('filename_key').to_dict() 
                                  for _, row in self.segmentation_data.iterrows() if pd.notna(row['filename_key'])}
@@ -160,9 +177,9 @@ class SafetyDemographicsInteractionModel:
                 feature_col = feature.replace(' ', '_').replace('___', ' - ')
                 merged_data[f"{feature_col}_1"] = merged_data['IMG1'].map(lambda x: segmentation_dict.get(x, {}).get(feature_col, 0))
                 merged_data[f"{feature_col}_2"] = merged_data['IMG2'].map(lambda x: segmentation_dict.get(x, {}).get(feature_col, 0))
-
+        
         self.merged_data = merged_data
-
+        
     def _process_demographics(self):
         """Create categorical columns from numeric codes."""
         for col, mapping in self.demographic_mappings.items():
@@ -172,6 +189,10 @@ class SafetyDemographicsInteractionModel:
         self.merged_data = self.merged_data[
             (self.merged_data['age_cat'] != 'other') & (self.merged_data['gender_cat'] != 'other')
         ].copy()
+        
+        # Drop rows with any remaining NaNs in demographic data that will be used for dummies
+        demographic_cat_cols = [f'{col}_cat' for col in self.demographic_mappings.keys() if f'{col}_cat' in self.merged_data.columns]
+        self.merged_data.dropna(subset=demographic_cat_cols, inplace=True)
 
     def create_demographic_dummy_variables(self, data):
         """Create dummy variables for demographic categories and safety interactions."""
@@ -191,15 +212,15 @@ class SafetyDemographicsInteractionModel:
                 data[f'{dummy_name}_2'] = data[f'{dummy_name}_1']
                 
                 interact_name = f"safety_{dummy_name}"
-                data[f'{interact_name}_1'] = data['safety_score_1'] * data[f'{dummy_name}_1']
-                data[f'{interact_name}_2'] = data['safety_score_2'] * data[f'{dummy_name}_2']
+                data[f'{interact_name}_1'] = data['SAFETY_SCORE_1'] * data[f'{dummy_name}_1']
+                data[f'{interact_name}_2'] = data['SAFETY_SCORE_2'] * data[f'{dummy_name}_2']
                 interaction_features.append(interact_name)
             return cats
 
         create_dummies('age', '18-30')
         create_dummies('gender', 'male')
         for demo in ['education', 'income', 'cyclingincident', 'cycler', 'cyclinglike', 
-                     'cyclingunsafe', 'biketype', 'work', 'car', 'trippurpose', 'triptime']:
+                     'cyclingunsafe', 'biketype', 'work', 'car', 'trippurpose', 'traveltime']:
             if f'{demo}_cat' in data.columns:
                 ref = data[f'{demo}_cat'].mode()[0]
                 create_dummies(demo, ref)
@@ -308,7 +329,7 @@ class SafetyDemographicsInteractionModel:
         table_path = self.output_dir / 'demographics_interaction_model.tex'
         with open(table_path, 'w') as f: f.write(latex_content)
         print(f"LaTeX table saved to {table_path}")
-
+    
     def run_analysis(self):
         """Run the complete safety * demographics interaction analysis"""
         self.load_trained_model_data()
