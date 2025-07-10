@@ -21,6 +21,7 @@ import biogeme.models as models
 import logging
 from biogeme.expressions import Beta, Variable, log, exp, bioDraws
 from pathlib import Path
+
 from datetime import datetime
 
 # Import MXL functions
@@ -182,7 +183,7 @@ class ChoiceModelBenchmark:
         # Filter and scale segmentation features
         self._filter_and_scale_segmentation_features()
         
-    def _filter_and_scale_segmentation_features(self, variance_threshold=1e-10, scale_features=False):
+    def _filter_and_scale_segmentation_features(self, variance_threshold=1e-6, scale_features=False):
         """
         Filter out segmentation features with very low variance and optionally apply z-score scaling
         
