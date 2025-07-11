@@ -8,20 +8,18 @@ Usage:
     python safety_landuse_interaction_model.py --model_path path/to/final_model.pickle
 """
 
-import os
 import argparse
+import pickle
+from datetime import datetime
+from pathlib import Path
+import logging
 import pandas as pd
 import numpy as np
-import pickle
 import biogeme.database as db
 import biogeme.biogeme as bio
 import biogeme.models as models
-import biogeme.results as res
-import logging
 from biogeme.expressions import Beta, Variable, log, exp, bioDraws
-from pathlib import Path
-from datetime import datetime
-import json
+
 from mxl_functions import (
     estimate_mxl, simulate_mxl, prepare_panel_data, apply_data_cleaning,
     extract_mxl_metrics, print_mxl_results
@@ -52,8 +50,9 @@ class SafetyLanduseInteractionModel:
             'B_UTILITY_POLE': 'Utility Pole'
         }
         
-        self.num_draws = 500
+        self.num_draws = 1000
         self.individual_id = 'RID'
+        self.min_obs_per_individual = 15
         
     def load_trained_model_data(self):
         """Load the trained model and extract its segmentation features."""
@@ -69,7 +68,7 @@ class SafetyLanduseInteractionModel:
 
     def _extract_model_features(self, model_results):
         """Extract segmentation features used in the original trained model."""
-        param_names = list(model_results.get_beta_values().keys())
+        param_names = list(model_results.betaNames)
         
         segmentation_features = []
         for param_name in param_names:
@@ -84,6 +83,15 @@ class SafetyLanduseInteractionModel:
         """Load and prepare all datasets, including land use data."""
         print("\nLoading and preparing all datasets...")
         self.choice_data = pd.read_csv(cv_dcm_path)
+
+        print("\nApplying data cleaning steps...")
+        self.choice_data = apply_data_cleaning(
+            self.choice_data,
+            individual_id=self.individual_id,
+            min_obs=self.min_obs_per_individual,
+            fix_problematic_rid=True
+        )
+
         self.main_design = pd.read_csv(self.main_design_path)
         self.safety_scores = pd.read_csv(safety_scores_path)
         self.safety_scores['image_name'] = self.safety_scores['image_name'].str.strip()
@@ -118,9 +126,11 @@ class SafetyLanduseInteractionModel:
         
         merged_data['landuse_1'] = merged_data['IMG1'].map(img_to_task)
         merged_data['landuse_2'] = merged_data['IMG2'].map(img_to_task)
-        most_common = merged_data['landuse_1'].mode()[0]
-        merged_data['landuse_1'].fillna(most_common, inplace=True)
-        merged_data['landuse_2'].fillna(most_common, inplace=True)
+        # Fill NA landuse with mode, but only after mapping
+        if not merged_data['landuse_1'].empty:
+            most_common = merged_data['landuse_1'].mode()[0]
+            merged_data['landuse_1'].fillna(most_common, inplace=True)
+            merged_data['landuse_2'].fillna(most_common, inplace=True)
 
         if self.segmentation_data is not None:
             segmentation_dict = {row['filename_key'] + '.jpg': row.drop('filename_key').to_dict() 
@@ -162,39 +172,54 @@ class SafetyLanduseInteractionModel:
         
         train_data, main_effects, interaction_effects = self.create_landuse_dummy_variables(train_data)
         test_data, _, _ = self.create_landuse_dummy_variables(test_data)
+
+        # Rename safety columns for consistency with panel data preparation
+        train_data.rename(columns={'safety_score_1': 'SAFETY_SCORE_1', 'safety_score_2': 'SAFETY_SCORE_2'}, inplace=True)
+        test_data.rename(columns={'safety_score_1': 'SAFETY_SCORE_1', 'safety_score_2': 'SAFETY_SCORE_2'}, inplace=True)
+
+        base_features = ['TT', 'TL', 'SAFETY_SCORE']
+        seg_features = [f.replace(' ', '_').replace('___', ' - ') for f in self.original_model_features]
+        all_features = base_features + seg_features + main_effects + interaction_effects
         
-        features = self.original_model_features + main_effects + interaction_effects + ['SAFETY_SCORE']
-        
-        _, biodata_wide, obs_per_ind = prepare_panel_data(train_data, self.individual_id, 'CHOICE', features)
+        _, biodata_wide, obs_per_ind = prepare_panel_data(train_data, self.individual_id, 'CHOICE', all_features)
         
         random_params_config = {
-            'TT': {'mean_init': -0.2, 'sigma_init': 0.1}, 'TL': {'mean_init': -0.3, 'sigma_init': 0.1},
+            'TT': {'mean_init': -0.2, 'sigma_init': 0.1}, 
+            'TL': {'mean_init': -0.3, 'sigma_init': 0.1},
             'SAFETY_SCORE': {'mean_init': 1.0, 'sigma_init': 0.1}
         }
-        random_params = {p: (Beta(f'B_{p}', c['mean_init'], None,None,0) + Beta(f'sigma_{p}', c['sigma_init'], None,None,0) * bioDraws(f'{p}_rnd', 'NORMAL')) 
-                         for p, c in random_params_config.items()}
+        random_params = {
+            p: (Beta(f'B_{p}', c['mean_init'], None, None, 0) + 
+                Beta(f'sigma_{p}', c['sigma_init'], None, None, 0) * bioDraws(f'{p}_rnd', 'NORMAL_HALTON2')) 
+            for p, c in random_params_config.items()
+        }
         
-        fixed_features = self.original_model_features + main_effects + interaction_effects
-        fixed_params = {f: Beta(f"B_{f.replace(' - ', '___').replace(' ', '_')}", 0, None,None,0) for f in fixed_features}
+        fixed_features = seg_features + main_effects + interaction_effects
+        fixed_params = {f: Beta(f"B_{f.replace(' - ', '___').replace(' ', '_')}", 0, None, None, 0) for f in fixed_features}
 
         V = []
         for q in range(obs_per_ind):
             V1, V2 = 0, 0
+            # Random parameters (TT, TL, SAFETY_SCORE)
             for name, param in random_params.items():
                 scale = 10 if name == 'TT' else (3 if name == 'TL' else 1)
                 v1_name, v2_name = f"{name}_1_{q}", f"{name}_2_{q}"
-                if v1_name in biodata_wide.variables:
+                if v1_name in biodata_wide.variables and v2_name in biodata_wide.variables:
                     V1 += param * Variable(v1_name) / scale
                     V2 += param * Variable(v2_name) / scale
+            
+            # Fixed parameters (segmentation, landuse main effects, interactions)
             for name, param in fixed_params.items():
                 v1_name, v2_name = f"{name}_1_{q}", f"{name}_2_{q}"
-                if v1_name in biodata_wide.variables:
+                if v1_name in biodata_wide.variables and v2_name in biodata_wide.variables:
                     V1 += param * Variable(v1_name)
                     V2 += param * Variable(v2_name)
             V.append({1: V1, 2: V2})
 
         results = estimate_mxl(V, {1:1, 2:1}, 'CHOICE', obs_per_ind, self.num_draws, biodata_wide, 'landuse_interaction', self.output_dir)
-        _, test_biodata_wide, _ = prepare_panel_data(test_data, self.individual_id, 'CHOICE', features)
+        
+        _, test_biodata_wide, _ = prepare_panel_data(test_data, self.individual_id, 'CHOICE', all_features)
+        
         test_sim_results = simulate_mxl(V, {1:1,2:1}, 'CHOICE', obs_per_ind, self.num_draws, test_biodata_wide, results.get_beta_values(), 'landuse_interaction')
         
         self.results = (results, test_sim_results, obs_per_ind)
@@ -214,18 +239,26 @@ class SafetyLanduseInteractionModel:
             return '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
 
         lines = [
-            "\\begin{table}[htbp]", "\\centering", "\\caption{Safety-Landuse Interaction Model (MXL)}",
-            "\\label{tab:landuse_interaction}", "\\resizebox{0.8\\textwidth}{!}{%",
-            "\\begin{tabular}{lc}", "\\toprule",
-            "& \\textbf{Coefficient (t-stat)} \\\\", "\\midrule",
-            "\\multicolumn{2}{l}{\\textit{Goodness of fit}} \\\\", "\\hline",
-            f"Sample size (Train) & {train_metrics['n_observations']} \\\\",
-            f"Sample size (Test) & {test_res['n_observations']} \\\\",
-            f"Log-Likelihood (Train) & {train_metrics['log_likelihood']:.2f} \\\\",
-            f"Log-Likelihood (Test) & {test_res['log_likelihood']:.2f} \\\\",
-            f"Rho-squared (Train) & {train_metrics['pseudo_r2']:.4f} \\\\",
-            f"Rho-squared (Test) & {test_res['pseudo_r2']:.4f} \\\\",
-            "\\hline", "\\multicolumn{2}{l}{\\textit{Parameters}} \\\\", "\\hline"
+            "\\begin{table}[htbp]",
+            "    \\centering",
+            "    \\caption{Safety-Landuse Interaction Model (MXL)}",
+            "    \\label{tab:landuse_interaction}",
+            "    \\resizebox{0.8\\textwidth}{!}{%",
+            "    \\begin{tabular}{lc}",
+            "        \\toprule",
+            "        & \\textbf{Coefficient (t-stat)} \\\\",
+            "        \\midrule",
+            "        \\multicolumn{2}{l}{\\textit{Goodness of fit}} \\\\",
+            "        \\hline",
+            f"        Sample size (Train) & {train_metrics['n_observations']} \\\\",
+            f"        Sample size (Test) & {test_res['n_observations']} \\\\",
+            f"        Log-Likelihood (Train) & {train_metrics['log_likelihood']:.2f} \\\\",
+            f"        Log-Likelihood (Test) & {test_res['log_likelihood']:.2f} \\\\",
+            f"        Rho-squared (Train) & {train_metrics['pseudo_r2']:.4f} \\\\",
+            f"        Rho-squared (Test) & {test_res['pseudo_r2']:.4f} \\\\",
+            "        \\hline",
+            "        \\multicolumn{2}{l}{\\textit{Parameters}} \\\\",
+            "        \\hline"
         ]
 
         for param in all_param_names:
@@ -235,12 +268,14 @@ class SafetyLanduseInteractionModel:
             p = params.loc[param, 'Rob. p-value']
             stars = format_p(p)
             val_str = f"{val:.3f}{stars} ({t:.2f})"
-            lines.append(f"{p_name_latex} & {val_str} \\\\")
+            lines.append(f"        {p_name_latex} & {val_str} \\\\")
         
         lines.extend([
-            "\\hline", "\\bottomrule",
-            "\\multicolumn{2}{l}{\\textsuperscript{***}p<0.001, \\textsuperscript{**}p<0.01, \\textsuperscript{*}p<0.05}",
-            "\\end{tabular}}", "\\end{table}"
+            "        \\hline",
+            "        \\bottomrule",
+            "        \\multicolumn{2}{l}{\\textsuperscript{***}p<0.001, \\textsuperscript{**}p<0.01, \\textsuperscript{*}p<0.05}",
+            "    \\end{tabular}}",
+            "\\end{table}"
         ])
 
         latex_content = "\n".join(lines)
@@ -259,7 +294,7 @@ class SafetyLanduseInteractionModel:
 def main():
     parser = argparse.ArgumentParser(description='Run Safety-Landuse Interaction Model (MXL)')
     parser.add_argument('--model_path', type=str,
-                        default='reports/models/mxl_choice_20250708_181840/final_full_model.pickle',
+                        default='reports/models/mxl_choice_20250709_183213/final_full_model.pickle',
                         help='Path to the trained base model pickle file')
     args = parser.parse_args()
     
