@@ -58,7 +58,7 @@ def estimate_mxl(V, AV, CHOICE, obs_per_ind, num_draws, biodata_wide, model_name
     # Configure output settings
     biogeme.generate_pickle = True
     biogeme.generate_html = True
-    biogeme.save_iterations = True
+    biogeme.save_iterations = False
     
     # Change to output directory if specified
     original_cwd = None
