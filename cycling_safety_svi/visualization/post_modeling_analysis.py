@@ -23,7 +23,112 @@ import seaborn as sns
 from PIL import Image
 import os
 from scipy.stats import rankdata
+from collections import namedtuple
+import matplotlib.colors as mcolors
+import matplotlib.cm as cm
 
+
+_Label = namedtuple(
+    "Label",
+    [
+        "name",
+        "id",
+        "train_id",
+        "category",
+        "category_id",
+        "has_instances",
+        "ignore_in_eval",
+        "color",
+    ],
+)
+
+
+def _create_mapillary_vistas_label_colormap():
+    """Creates a label colormap used in Mapillary Vistas segmentation benchmark.
+
+    Args:
+
+    Returns:
+      : A list of labels for visualizing segmentation results.
+
+    """
+    labels = [
+        _Label("Bird", 0, 0, "animal", 0, True, False, (165, 42, 42)),
+        _Label("Ground Animal", 1, 1, "animal", 0, True, False, (0, 192, 0)),
+        _Label("Curb", 2, 2, "construction", 1, False, False, (196, 196, 196)),
+        _Label("Fence", 3, 3, "construction", 1, False, False, (190, 153, 153)),
+        _Label("Guard Rail", 4, 4, "construction", 1, False, False, (180, 165, 180)),
+        _Label("Barrier", 5, 5, "construction", 1, False, False, (102, 102, 156)),
+        _Label("Wall", 6, 6, "construction", 1, False, False, (102, 102, 156)),
+        _Label("Bike Lane", 7, 7, "flat", 2, False, False, (128, 64, 255)),
+        _Label("Crosswalk - Plain", 8, 8, "flat", 2, False, False, (140, 140, 200)),
+        _Label("Curb Cut", 9, 9, "flat", 2, False, False, (170, 170, 170)),
+        _Label("Parking", 10, 10, "flat", 2, False, False, (250, 170, 160)),
+        _Label("Pedestrian Area", 11, 11, "flat", 2, False, False, (96, 96, 96)),
+        _Label("Rail Track", 12, 12, "flat", 2, False, False, (230, 150, 140)),
+        _Label("Road", 13, 13, "flat", 2, False, False, (128, 64, 128)),
+        _Label("Service Lane", 14, 14, "flat", 2, False, False, (110, 110, 110)),
+        _Label("Sidewalk", 15, 15, "flat", 2, False, False, (244, 35, 232)),
+        _Label("Bridge", 16, 16, "construction", 1, False, False, (150, 100, 100)),
+        _Label("Building", 17, 17, "construction", 1, False, False, (70, 70, 70)),
+        _Label("Tunnel", 18, 18, "construction", 1, False, False, (150, 120, 90)),
+        _Label("Person", 19, 19, "human", 3, True, False, (220, 20, 60)),
+        _Label("Bicyclist", 20, 20, "human", 3, True, False, (255, 0, 0)),
+        _Label("Motorcyclist", 21, 21, "human", 3, True, False, (255, 0, 0)),
+        _Label("Other Rider", 22, 22, "human", 3, True, False, (255, 0, 0)),
+        _Label(
+            "Lane Marking - Crosswalk",
+            23,
+            23,
+            "marking",
+            4,
+            False,
+            True,
+            (200, 128, 128),
+        ),
+        _Label("Lane Marking - General", 24, 24, "marking", 4, True, False, (255, 255, 255)),
+        _Label("Mountain", 25, 25, "nature", 5, False, False, (64, 170, 64)),
+        _Label("Sand", 26, 26, "nature", 5, False, False, (230, 160, 50)),
+        _Label("Sky", 27, 27, "sky", 6, False, False, (70, 130, 180)),
+        _Label("Snow", 28, 28, "nature", 5, False, False, (190, 255, 255)),
+        _Label("Terrain", 29, 29, "nature", 5, False, False, (152, 251, 152)),
+        _Label("Vegetation", 30, 30, "nature", 5, False, False, (107, 142, 35)),
+        _Label("Water", 31, 31, "water", 7, False, False, (0, 170, 30)),
+        _Label("Banner", 32, 32, "object", 8, False, False, (255, 220, 0)),
+        _Label("Bench", 33, 33, "object", 8, False, False, (255, 0, 0)),
+        _Label("Bike Rack", 34, 34, "object", 8, False, False, (255, 0, 0)),
+        _Label("Billboard", 35, 35, "object", 8, False, False, (255, 0, 0)),
+        _Label("Catch Basin", 36, 36, "object", 8, False, False, (255, 0, 0)),
+        _Label("CCTV Camera", 37, 37, "object", 8, False, False, (255, 0, 0)),
+        _Label("Fire Hydrant", 38, 38, "object", 8, False, False, (255, 0, 0)),
+        _Label("Junction Box", 39, 39, "object", 8, False, False, (255, 0, 0)),
+        _Label("Mailbox", 40, 40, "object", 8, False, False, (255, 0, 0)),
+        _Label("Manhole", 41, 41, "object", 8, False, False, (255, 0, 0)),
+        _Label("Phone Booth", 42, 42, "object", 8, False, False, (255, 0, 0)),
+        _Label("Pothole", 43, 43, "object", 8, False, False, (255, 0, 0)),
+        _Label("Street Light", 44, 44, "object", 8, False, False, (255, 0, 0)),
+        _Label("Pole", 45, 45, "object", 8, False, False, (255, 0, 0)),
+        _Label("Traffic Sign Frame", 46, 46, "object", 8, False, False, (255, 0, 0)),
+        _Label("Utility Pole", 47, 47, "object", 8, False, False, (255, 0, 0)),
+        _Label("Traffic Light", 48, 48, "object", 8, False, False, (255, 0, 0)),
+        _Label("Traffic Sign (Back)", 49, 49, "object", 8, False, False, (255, 0, 0)),
+        _Label("Traffic Sign (Front)", 50, 50, "object", 8, False, False, (255, 0, 0)),
+        _Label("Trash Can", 51, 51, "object", 8, False, False, (255, 0, 0)),
+        _Label("Bicycle", 52, 52, "vehicle", 9, True, False, (119, 11, 32)),
+        _Label("Boat", 53, 53, "vehicle", 9, False, False, (0, 0, 142)),
+        _Label("Bus", 54, 54, "vehicle", 9, True, False, (0, 60, 100)),
+        _Label("Car", 55, 55, "vehicle", 9, True, False, (0, 0, 142)),
+        _Label("Caravan", 56, 56, "vehicle", 9, True, False, (0, 0, 90)),
+        _Label("Motorcycle", 57, 57, "vehicle", 9, True, False, (0, 0, 230)),
+        _Label("On Rails", 58, 58, "vehicle", 9, False, False, (0, 80, 100)),
+        _Label("Other Vehicle", 59, 59, "vehicle", 9, True, False, (128, 64, 64)),
+        _Label("Trailer", 60, 60, "vehicle", 9, True, False, (0, 0, 110)),
+        _Label("Truck", 61, 61, "vehicle", 9, True, False, (0, 0, 70)),
+        _Label("Wheeled Slow", 62, 62, "vehicle", 9, False, False, (0, 0, 192)),
+        _Label("Car Mount", 63, 63, "vehicle", 9, True, False, (32, 32, 32)),
+        _Label("Ego Vehicle", 64, 64, "vehicle", 9, True, False, (120, 10, 10)),
+    ]
+    return labels
 
 class PostModelingAnalyzer:
     """Analyzes and visualizes results from stepwise choice models"""
@@ -1004,12 +1109,73 @@ class PostModelingAnalyzer:
         
         return merged_data
     
+    def _add_legends_to_figure(self, fig):
+        """Adds segmentation legend and Grad-CAM colorbar to the bottom of a figure in two columns."""
+        
+        # --- Right Column: Grad-CAM Colorbar ---
+        # Position: [left, bottom, width, height] in figure coordinates
+        cbar_ax = fig.add_axes([0.65, 0.05, 0.3, 0.02])
+        
+        cmap = cm.jet
+        norm = mcolors.Normalize(vmin=0, vmax=1)
+        sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+        sm.set_array([])
+        
+        cbar = fig.colorbar(sm, cax=cbar_ax, orientation='horizontal')
+        cbar.set_label('Grad-CAM Intensity', fontsize=12, labelpad=5)
+        cbar.ax.tick_params(labelsize=10)
+
+        # --- Left Column: Segmentation Legend ---
+        legend_ax = fig.add_axes([0.05, 0.0, 0.55, 0.12])
+        legend_ax.axis('off')
+        
+        labels = _create_mapillary_vistas_label_colormap()
+        
+        # Calculate mean pixel ratios to find top classes
+        if self.pixel_ratios is not None and not self.pixel_ratios.empty:
+            # Exclude non-class columns and calculate mean
+            class_columns = self.pixel_ratios.columns.drop(['filename_key'])
+            mean_ratios = self.pixel_ratios[class_columns].mean().sort_values(ascending=False)
+            top_20_classes = mean_ratios.head(20).index.tolist()
+            plot_labels = [l for l in labels if l.name in top_20_classes]
+        else:
+            # Fallback to a default list if pixel ratios are not available
+            relevant_label_names = [
+                "Road", "Sidewalk", "Building", "Wall", "Fence", "Pole", "Traffic Light", 
+                "Traffic Sign (Front)", "Vegetation", "Terrain", "Sky", "Person", "Bicyclist", 
+                "Car", "Bus", "Truck", "Bike Lane", "Curb", "Crosswalk - Plain", "Parking"
+            ]
+            plot_labels = [l for l in labels if l.name in relevant_label_names]
+        
+        
+        n_labels = len(plot_labels)
+        n_cols = 4  # Arrange in 4 columns
+        n_rows = (n_labels + n_cols - 1) // n_cols
+        
+        for i, label in enumerate(plot_labels):
+            col = i % n_cols
+            row = i // n_cols
+            
+            x_pos = col * (1 / n_cols)
+            y_pos = 1 - (row + 1) * (1 / n_rows)
+
+            color = np.array(label.color) / 255.0
+            
+            # Color patch
+            rect = patches.Rectangle((x_pos + 0.01, y_pos + 0.02), 0.03, 0.12, 
+                                     facecolor=color, transform=legend_ax.transAxes, clip_on=True)
+            legend_ax.add_patch(rect)
+            
+            # Text label
+            legend_ax.text(x_pos + 0.05, y_pos + 0.08, label.name, 
+                           transform=legend_ax.transAxes, fontsize=11, va='center')
+
     def _create_image_grid_figure_with_cam(self, merged_data, grouping_col, unique_groups, n_groups, figure_num, title):
         """Helper function to create image grid with Grad-CAM overlays."""
         n_cols = 3
         n_image_cols = n_cols * 2
         
-        fig, axes = plt.subplots(n_groups, n_image_cols + 1, figsize=(18, 3 * n_groups), 
+        fig, axes = plt.subplots(n_groups, n_image_cols + 1, figsize=(18, 3 * n_groups + 2.5), 
                                  gridspec_kw={'width_ratios': [1.5] + [1]*n_image_cols})
         if n_groups == 1:
             axes = axes.reshape(1, -1)
@@ -1059,7 +1225,10 @@ class PostModelingAnalyzer:
                 for col in range(n_image_cols):
                     axes[row, 1+col].axis('off')
         
-        plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        plt.tight_layout(rect=[0, 0.15, 1, 0.95])
+        
+        self._add_legends_to_figure(fig)
+        
         fig_path = self.output_dir / f'figure_{figure_num}_image_grid_by_{grouping_col}_with_cam.png'
         plt.savefig(fig_path, dpi=300, bbox_inches='tight')
         print(f"Figure {figure_num} with CAM saved to: {fig_path}")

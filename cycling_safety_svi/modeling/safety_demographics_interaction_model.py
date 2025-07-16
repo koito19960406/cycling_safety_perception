@@ -34,15 +34,16 @@ from mxl_functions import (
 class SafetyDemographicsInteractionModel:
     """Extends a trained choice model with safety * demographics interaction effects using MXL."""
     
-    def __init__(self, model_path, output_dir='reports/models/interaction'):
+    def __init__(self, model_path, model_group, demographic_variables, output_dir):
         """Initialize the demographics interaction model"""
         self.model_path = Path(model_path)
+        self.model_group = model_group
+        self.demographic_variables = demographic_variables
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.output_dir = Path(output_dir) / f"safety_demographics_{timestamp}"
+        self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
-        print(f"Safety-Demographics Interaction Model (MXL)")
+        print(f"Safety-Demographics Interaction Model (MXL) - Group: {self.model_group}")
         print(f"Base model path: {self.model_path}")
         print(f"Output directory: {self.output_dir}")
         
@@ -196,7 +197,7 @@ class SafetyDemographicsInteractionModel:
 
     def create_demographic_dummy_variables(self, data):
         """Create dummy variables for demographic categories and safety interactions."""
-        print("Creating dummy variables and interaction terms...")
+        print(f"Creating dummy variables and interaction terms for group: {self.model_group}...")
         
         interaction_features = []
         
@@ -217,13 +218,15 @@ class SafetyDemographicsInteractionModel:
                 interaction_features.append(interact_name)
             return cats
 
-        create_dummies('age', '18-30')
-        create_dummies('gender', 'male')
-        for demo in ['education', 'income', 'cyclingincident', 'cycler', 'cyclinglike', 
-                     'cyclingunsafe', 'biketype', 'work', 'car', 'trippurpose', 'traveltime']:
-            if f'{demo}_cat' in data.columns:
-                ref = data[f'{demo}_cat'].mode()[0]
-                create_dummies(demo, ref)
+        for demo in self.demographic_variables:
+            if demo == 'age':
+                create_dummies('age', '18-30')
+            elif demo == 'gender':
+                create_dummies('gender', 'male')
+            else:
+                if f'{demo}_cat' in data.columns and data[f'{demo}_cat'].notna().any():
+                    ref = data[f'{demo}_cat'].mode()[0]
+                    create_dummies(demo, ref)
 
         return data, interaction_features
 
@@ -247,7 +250,7 @@ class SafetyDemographicsInteractionModel:
             'TT': {'mean_init': -0.2, 'sigma_init': 0.1}, 'TL': {'mean_init': -0.3, 'sigma_init': 0.1},
             'SAFETY_SCORE': {'mean_init': 1.0, 'sigma_init': 0.1}
         }
-        random_params = {p: (Beta(f'B_{p}', c['mean_init'], None,None,0) + Beta(f'sigma_{p}', c['sigma_init'], None,None,0) * bioDraws(f'{p}_rnd', 'NORMAL')) 
+        random_params = {p: (Beta(f'B_{p}', c['mean_init'], None,None,0) + Beta(f'sigma_{p}', c['sigma_init'], None,None,0) * bioDraws(f'{p}_rnd', 'NORMAL_HALTON2')) 
                          for p, c in random_params_config.items()}
         
         fixed_features = self.original_model_features + interaction_features
@@ -272,9 +275,10 @@ class SafetyDemographicsInteractionModel:
             V.append({1: V1, 2: V2})
 
         # Estimate and simulate
-        results = estimate_mxl(V, {1:1, 2:1}, 'CHOICE', obs_per_ind, self.num_draws, biodata_wide, 'demographics_interaction', self.output_dir)
+        model_name = f'demographics_interaction_{self.model_group}'
+        results = estimate_mxl(V, {1:1, 2:1}, 'CHOICE', obs_per_ind, self.num_draws, biodata_wide, model_name, self.output_dir)
         _, test_biodata_wide, _ = prepare_panel_data(test_data, self.individual_id, 'CHOICE', features)
-        test_sim_results = simulate_mxl(V, {1:1,2:1}, 'CHOICE', obs_per_ind, self.num_draws, test_biodata_wide, results.get_beta_values(), 'demographics_interaction')
+        test_sim_results = simulate_mxl(V, {1:1,2:1}, 'CHOICE', obs_per_ind, self.num_draws, test_biodata_wide, results.get_beta_values(), model_name)
         
         self.results = (results, test_sim_results, obs_per_ind)
         print_mxl_results(results)
@@ -295,9 +299,12 @@ class SafetyDemographicsInteractionModel:
         def format_p(p):
             return '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
 
+        table_title = f"Safety-Demographics Interaction Model (MXL) - {self.model_group.replace('_', ' ').title()}"
+        table_label = f"tab:demographics_interaction_{self.model_group}"
+        
         lines = [
-            "\\begin{table}[htbp]", "\\centering", "\\caption{Safety-Demographics Interaction Model (MXL)}",
-            "\\label{tab:demographics_interaction}", "\\resizebox{0.8\\textwidth}{!}{%",
+            "\\begin{table}[htbp]", "\\centering", f"\\caption{{{table_title}}}",
+            f"\\label{{{table_label}}}", "\\resizebox{0.8\\textwidth}{!}{%",
             "\\begin{tabular}{lc}", "\\toprule",
             "& \\textbf{Coefficient (t-stat)} \\\\", "\\midrule",
             "\\multicolumn{2}{l}{\\textit{Goodness of fit}} \\\\", "\\hline",
@@ -326,7 +333,7 @@ class SafetyDemographicsInteractionModel:
         ])
 
         latex_content = "\n".join(lines)
-        table_path = self.output_dir / 'demographics_interaction_model.tex'
+        table_path = self.output_dir / f'demographics_interaction_model_{self.model_group}.tex'
         with open(table_path, 'w') as f: f.write(latex_content)
         print(f"LaTeX table saved to {table_path}")
     
@@ -344,9 +351,31 @@ def main():
                         default='reports/models/mxl_choice_20250709_183213/final_full_model.pickle',
                         help='Path to the trained base model pickle file')
     args = parser.parse_args()
+
+    model_groups = {
+        "demographic": ["age", "gender"],
+        "socioeconomic": ["education", "income"],
+        "cycling_experience": ["cyclingincident", "cyclinglike", "cyclingunsafe"],
+        "cycling_type": ["cycler", "biketype"],
+        "work_and_car": ["work", "car"],
+        "trip": ["trippurpose", "traveltime"]
+    }
     
-    interaction_model = SafetyDemographicsInteractionModel(model_path=args.model_path)
-    interaction_model.run_analysis()
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    base_output_dir = Path('reports/models/interaction') / f"safety_demographics_{timestamp}"
+
+    for group_name, variables in model_groups.items():
+        print(f"\n----- Running analysis for group: {group_name} -----")
+        
+        group_output_dir = base_output_dir / group_name
+
+        interaction_model = SafetyDemographicsInteractionModel(
+            model_path=args.model_path,
+            model_group=group_name,
+            demographic_variables=variables,
+            output_dir=group_output_dir
+        )
+        interaction_model.run_analysis()
 
 if __name__ == "__main__":
     main() 

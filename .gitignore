@@ -196,3 +196,4 @@ wandb/
 *.drawio
 # .xml files in any directory
 *.xml
+*.pdf
