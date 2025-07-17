@@ -51,11 +51,70 @@ class SafetyDemographicsInteractionModel:
         
         # Mappings will be populated from data
         self.demographic_mappings = {
-            'age': {1: '18-30', 2: '31-45', 3: '46-60', 4: '60+', 5: 'other'},
-            'gender': {1: 'male', 2: 'female', 3: 'other'},
-            'education': {}, 'income': {}, 'cyclingincident': {}, 'cycler': {},
-            'cyclinglike': {}, 'cyclingunsafe': {}, 'biketype': {}, 'work': {},
-            'car': {}, 'trippurpose': {}, 'traveltime': {}
+            'age': {
+                1: '18-30 years', 2: '31-45 years', 3: '46-60 years', 
+                4: '61-75 years', 5: '76+ years'
+            },
+            'gender': {
+                1: 'Male', 2: 'Female', 3: 'Other', 4: 'Prefer not to say'
+            },
+            'household_composition': {
+                1: 'Live alone', 2: 'Couple without children', 3: 'Couple with children',
+                4: 'One adult with children', 5: 'Two or more adults (not couple)', 6: 'Other'
+            },
+            'household_size': {
+                1: '1 person', 2: '2 people', 3: '3 people', 
+                4: '4 people', 5: '5 people', 6: '6+ people'
+            },
+            'education': {
+                1: 'No education', 2: 'Primary education', 3: 'Lower vocational',
+                4: 'Lower secondary', 5: 'Intermediate vocational', 6: 'MULO or MMS',
+                7: 'HAVO', 8: 'HBS, VWO, etc.', 9: 'Higher vocational (HBO)',
+                10: 'University', 11: 'M.Sc.', 12: 'Ph.D.',
+                13: 'Other', 14: 'Prefer not to say'
+            },
+            'income': {
+                1: '< €1,250', 2: '€1,251-€1,700', 3: '€1,701-€2,250',
+                4: '€2,251-€3,650', 5: '€3,651-€7,000', 6: '> €7,001',
+                7: 'Unknown', 8: 'Prefer not to say'
+            },
+            'bills': {
+                1: 'Very easy', 2: 'Easy', 3: 'Reasonable', 
+                4: 'Difficult', 5: 'Very difficult', 6: 'Unknown'
+            },
+            'transportation': {
+                1: 'Walking', 2: 'Bike', 3: 'Public transport', 4: 'Car', 5: 'Other'
+            },
+            'car': {
+                1: 'No cars', 2: '1 car', 3: '2 cars', 4: '3+ cars'
+            },
+            'traveltime': {
+                1: 'No commute', 2: '< 10 min', 3: '10-20 min',
+                4: '20-30 min', 5: '30-40 min'
+            },
+            'commutingdays': {
+                1: 'No commute', 2: '1 day/week', 3: '2 days/week',
+                4: '3 days/week', 5: '4 days/week', 6: '5+ days/week'
+            },
+            'cycler': {
+                1: 'Do not cycle', 2: '< 1/week', 3: '1 day/week',
+                4: '2 days/week', 5: '3 days/week', 6: '4 days/week',
+                7: '5+ days/week'
+            },
+            'cyclingincident': {
+                1: 'Yes, severe', 2: 'Yes, mild', 3: 'No'
+            },
+            'cyclinglike': {1: 'Yes', 2: 'No'},
+            'cyclingunsafe': {
+                1: 'Yes, sometimes', 2: 'Yes, evening/night', 3: 'No'
+            },
+            'biketype': {
+                1: 'Regular bike', 2: 'Racing bike', 3: 'E-bike', 
+                4: 'Fatbike', 5: 'Other'
+            },
+            'trippurpose': {
+                1: 'Commuting', 2: 'Errands', 3: 'Recreational', 4: 'Other'
+            }
         }
         
         self.feature_name_mapping = {
@@ -131,27 +190,39 @@ class SafetyDemographicsInteractionModel:
         conn = sqlite3.connect(database_path)
         
         demographic_cols = list(self.demographic_mappings.keys())
+        # The user requested to exclude 'work' from the analysis
+        if 'work' in demographic_cols:
+            demographic_cols.remove('work')
+
         query = f"SELECT respondent_id, set_id, {', '.join(demographic_cols)} FROM Response WHERE age IS NOT NULL AND gender IS NOT NULL"
         
         try:
             self.demographics = pd.read_sql_query(query, conn)
         except Exception as e:
             print(f"Database query failed, likely missing columns: {e}")
-            print("Attempting to load without trippurpose and traveltime...")
-            demographic_cols.remove('trippurpose')
-            demographic_cols.remove('traveltime')
+            print("Attempting to load without new demographic columns...")
+            
+            new_cols = ['household_composition', 'household_size', 'bills', 'transportation', 'commutingdays', 'trippurpose', 'traveltime']
+            demographic_cols = [c for c in demographic_cols if c not in new_cols]
+            
             query = f"SELECT respondent_id, set_id, {', '.join(demographic_cols)} FROM Response WHERE age IS NOT NULL AND gender IS NOT NULL"
             self.demographics = pd.read_sql_query(query, conn)
         
         conn.close()
         
-        for col in self.demographics.columns:
-            if col in self.demographic_mappings and col not in ['age', 'gender']:
-                counts = self.demographics[col].value_counts().sort_index()
-                print(f"\n{col} distribution:\n{counts}")
-                unique_vals = sorted([x for x in self.demographics[col].unique() if pd.notna(x)])
-                self.demographic_mappings[col] = {val: f'{col}_{int(val)}' for val in unique_vals}
-                print(f"Created mapping for {col}: {self.demographic_mappings[col]}")
+        # Handle specific data cleaning tasks
+        if 'traveltime' in self.demographics.columns:
+            self.demographics['traveltime'] = self.demographics['traveltime'].replace(6, 5)
+
+        # The user requested to use the provided labels, so we comment out dynamic mapping generation
+        # for col in self.demographics.columns:
+        #     if col in self.demographic_mappings and col not in ['age', 'gender']:
+        #         counts = self.demographics[col].value_counts().sort_index()
+        #         print(f"\n{col} distribution:\n{counts}")
+        #         unique_vals = sorted([x for x in self.demographics[col].unique() if pd.notna(x)])
+        #         self.demographic_mappings[col] = {val: f'{col}_{int(val)}' for val in unique_vals}
+        #         print(f"Created mapping for {col}: {self.demographic_mappings[col]}")
+
         # drop any rows with NaN in demographics
         self.demographics.dropna(subset=demographic_cols, inplace=True)
         # For set_id == 63, there are two rows with the same RID. Set the second one's set_id to 63999
@@ -220,13 +291,15 @@ class SafetyDemographicsInteractionModel:
 
         for demo in self.demographic_variables:
             if demo == 'age':
-                create_dummies('age', '18-30')
+                create_dummies('age', '18-30 years')
             elif demo == 'gender':
-                create_dummies('gender', 'male')
+                create_dummies('gender', 'Male')
             else:
                 if f'{demo}_cat' in data.columns and data[f'{demo}_cat'].notna().any():
-                    ref = data[f'{demo}_cat'].mode()[0]
-                    create_dummies(demo, ref)
+                    # Reference category is the one with the lowest numeric key
+                    ref_key = min(self.demographic_mappings[demo].keys())
+                    ref_cat = self.demographic_mappings[demo][ref_key]
+                    create_dummies(demo, ref_cat)
 
         return data, interaction_features
 
@@ -353,14 +426,24 @@ def main():
     args = parser.parse_args()
 
     model_groups = {
-        "demographic": ["age", "gender"],
-        "socioeconomic": ["education", "income"],
-        "cycling_experience": ["cyclingincident", "cyclinglike", "cyclingunsafe"],
-        "cycling_type": ["cycler", "biketype"],
-        "work_and_car": ["work", "car"],
-        "trip": ["trippurpose", "traveltime"]
+        "demographic_age": ["age"],
+        "demographic_gender": ["gender"],
+        "demographic_household_composition": ["household_composition"],
+        "demographic_household_size": ["household_size"],
+        "socioeconomic_education": ["education"],
+        "socioeconomic_income": ["income"],
+        "socioeconomic_bills": ["bills"],
+        "cycling_experience_cyclingincident": ["cyclingincident"],
+        "cycling_experience_cyclinglike": ["cyclinglike"],
+        "cycling_experience_cyclingunsafe": ["cyclingunsafe"],
+        "cycling_type_cycler": ["cycler"],
+        "cycling_type_biketype": ["biketype"],
+        "transportation_car": ["car"],
+        "transportation_transportation": ["transportation"],
+        "trip_trippurpose": ["trippurpose"],
+        "trip_traveltime": ["traveltime"],
+        "trip_commutingdays": ["commutingdays"]
     }
-    
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     base_output_dir = Path('reports/models/interaction') / f"safety_demographics_{timestamp}"
 
