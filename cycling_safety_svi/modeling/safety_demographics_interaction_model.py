@@ -49,71 +49,71 @@ class SafetyDemographicsInteractionModel:
         
         logging.getLogger('biogeme').setLevel(logging.WARNING)
         
-        # Mappings will be populated from data
+        # Mappings with sanitized labels for biogeme compatibility
         self.demographic_mappings = {
             'age': {
-                1: '18-30 years', 2: '31-45 years', 3: '46-60 years', 
-                4: '61-75 years', 5: '76+ years'
+                1: 'age_18_30', 2: 'age_31_45', 3: 'age_46_60', 
+                4: 'age_61_75', 5: 'age_76_plus'
             },
             'gender': {
-                1: 'Male', 2: 'Female', 3: 'Other', 4: 'Prefer not to say'
+                1: 'Male', 2: 'Female', 3: 'Other', 4: 'Prefer_not_to_say'
             },
             'household_composition': {
-                1: 'Live alone', 2: 'Couple without children', 3: 'Couple with children',
-                4: 'One adult with children', 5: 'Two or more adults (not couple)', 6: 'Other'
+                1: 'Live_alone', 2: 'Couple_no_children', 3: 'Couple_with_children',
+                4: 'One_adult_with_children', 5: 'Two_plus_adults_not_couple', 6: 'Other_hh'
             },
             'household_size': {
-                1: '1 person', 2: '2 people', 3: '3 people', 
-                4: '4 people', 5: '5 people', 6: '6+ people'
+                1: 'hh_1', 2: 'hh_2', 3: 'hh_3', 
+                4: 'hh_4', 5: 'hh_5', 6: 'hh_6_plus'
             },
             'education': {
-                1: 'No education', 2: 'Primary education', 3: 'Lower vocational',
-                4: 'Lower secondary', 5: 'Intermediate vocational', 6: 'MULO or MMS',
-                7: 'HAVO', 8: 'HBS, VWO, etc.', 9: 'Higher vocational (HBO)',
-                10: 'University', 11: 'M.Sc.', 12: 'Ph.D.',
-                13: 'Other', 14: 'Prefer not to say'
+                1: 'No_education', 2: 'Primary_education', 3: 'Lower_vocational',
+                4: 'Lower_secondary', 5: 'Intermediate_vocational', 6: 'MULO_or_MMS',
+                7: 'HAVO', 8: 'HBS_VWO_etc', 9: 'HBO',
+                10: 'University', 11: 'MSc', 12: 'PhD',
+                13: 'Other_edu', 14: 'Prefer_not_to_say_edu'
             },
             'income': {
-                1: '< €1,250', 2: '€1,251-€1,700', 3: '€1,701-€2,250',
-                4: '€2,251-€3,650', 5: '€3,651-€7,000', 6: '> €7,001',
-                7: 'Unknown', 8: 'Prefer not to say'
+                1: 'inc_lt_1250', 2: 'inc_1251_1700', 3: 'inc_1701_2250',
+                4: 'inc_2251_3650', 5: 'inc_3651_7000', 6: 'inc_gt_7001',
+                7: 'Unknown_inc', 8: 'Prefer_not_to_say_inc'
             },
             'bills': {
-                1: 'Very easy', 2: 'Easy', 3: 'Reasonable', 
-                4: 'Difficult', 5: 'Very difficult', 6: 'Unknown'
+                1: 'bills_very_easy', 2: 'bills_easy', 3: 'bills_reasonable', 
+                4: 'bills_difficult', 5: 'bills_very_difficult', 6: 'Unknown_bills'
             },
             'transportation': {
-                1: 'Walking', 2: 'Bike', 3: 'Public transport', 4: 'Car', 5: 'Other'
+                1: 'Walk', 2: 'Bike', 3: 'Public_transport', 4: 'Car_transport', 5: 'Other_transport'
             },
             'car': {
-                1: 'No cars', 2: '1 car', 3: '2 cars', 4: '3+ cars'
+                1: 'No_cars', 2: 'car_1', 3: 'car_2', 4: 'car_3_plus'
             },
             'traveltime': {
-                1: 'No commute', 2: '< 10 min', 3: '10-20 min',
-                4: '20-30 min', 5: '30-40 min'
+                1: 'No_commute', 2: 'tt_lt_10_min', 3: 'tt_10_20_min',
+                4: 'tt_20_30_min', 5: 'tt_30_40_min'
             },
             'commutingdays': {
-                1: 'No commute', 2: '1 day/week', 3: '2 days/week',
-                4: '3 days/week', 5: '4 days/week', 6: '5+ days/week'
+                1: 'cd_no_commute', 2: 'cd_1_day_week', 3: 'cd_2_days_week',
+                4: 'cd_3_days_week', 5: 'cd_4_days_week', 6: 'cd_5_plus_days_week'
             },
             'cycler': {
-                1: 'Do not cycle', 2: '< 1/week', 3: '1 day/week',
-                4: '2 days/week', 5: '3 days/week', 6: '4 days/week',
-                7: '5+ days/week'
+                1: 'Do_not_cycle', 2: 'cycle_lt_1_week', 3: 'cycle_1_day_week',
+                4: 'cycle_2_days_week', 5: 'cycle_3_days_week', 6: 'cycle_4_days_week',
+                7: 'cycle_5_plus_days_week'
             },
             'cyclingincident': {
-                1: 'Yes, severe', 2: 'Yes, mild', 3: 'No'
+                1: 'incid_yes_severe', 2: 'incid_yes_mild', 3: 'incid_no'
             },
-            'cyclinglike': {1: 'Yes', 2: 'No'},
+            'cyclinglike': {1: 'like_yes', 2: 'like_no'},
             'cyclingunsafe': {
-                1: 'Yes, sometimes', 2: 'Yes, evening/night', 3: 'No'
+                1: 'unsafe_yes_sometimes', 2: 'unsafe_yes_evening_night', 3: 'unsafe_no'
             },
             'biketype': {
-                1: 'Regular bike', 2: 'Racing bike', 3: 'E-bike', 
-                4: 'Fatbike', 5: 'Other'
+                1: 'Regular_bike', 2: 'Racing_bike', 3: 'E_bike', 
+                4: 'Fatbike', 5: 'Other_bike'
             },
             'trippurpose': {
-                1: 'Commuting', 2: 'Errands', 3: 'Recreational', 4: 'Other'
+                1: 'purpose_commuting', 2: 'purpose_errands', 3: 'purpose_recreational', 4: 'purpose_other'
             }
         }
         
@@ -271,6 +271,7 @@ class SafetyDemographicsInteractionModel:
         print(f"Creating dummy variables and interaction terms for group: {self.model_group}...")
         
         interaction_features = []
+        main_effect_features = []
         
         def create_dummies(feature, ref_cat):
             cat_col = f'{feature}_cat'
@@ -278,10 +279,12 @@ class SafetyDemographicsInteractionModel:
             
             cats = [c for c in data[cat_col].unique() if pd.notna(c) and c != ref_cat]
             for cat in cats:
-                dummy_name = cat.replace(' ', '_').replace('-', '_').replace('>', 'gt').replace('<', 'lt').replace('+', 'plus')
+                # Labels from demographic_mappings are already sanitized
+                dummy_name = cat
                 
                 data[f'{dummy_name}_1'] = (data[cat_col] == cat).astype(int)
                 data[f'{dummy_name}_2'] = data[f'{dummy_name}_1']
+                main_effect_features.append(dummy_name)
                 
                 interact_name = f"safety_{dummy_name}"
                 data[f'{interact_name}_1'] = data['SAFETY_SCORE_1'] * data[f'{dummy_name}_1']
@@ -290,18 +293,23 @@ class SafetyDemographicsInteractionModel:
             return cats
 
         for demo in self.demographic_variables:
-            if demo == 'age':
-                create_dummies('age', '18-30 years')
-            elif demo == 'gender':
-                create_dummies('gender', 'Male')
-            else:
-                if f'{demo}_cat' in data.columns and data[f'{demo}_cat'].notna().any():
-                    # Reference category is the one with the lowest numeric key
-                    ref_key = min(self.demographic_mappings[demo].keys())
+            # The logic to determine the reference category is now centralized here.
+            # It finds the lowest numeric key present in the actual data for that demographic.
+            if f'{demo}_cat' in data.columns and data[f'{demo}_cat'].notna().any():
+                
+                # Get the numeric keys corresponding to the categories present in the data
+                reverse_mapping = {v: k for k, v in self.demographic_mappings[demo].items()}
+                present_cats = data[f'{demo}_cat'].dropna().unique()
+                data_keys = [reverse_mapping[cat] for cat in present_cats if cat in reverse_mapping]
+                
+                if data_keys:
+                    ref_key = min(data_keys)
                     ref_cat = self.demographic_mappings[demo][ref_key]
                     create_dummies(demo, ref_cat)
+                else:
+                    print(f"Warning: Could not find a valid reference category for '{demo}'. Skipping dummy creation.")
 
-        return data, interaction_features
+        return data, interaction_features, main_effect_features
 
     def estimate_interaction_model(self):
         """Estimate the MXL safety * demographics interaction model."""
@@ -310,10 +318,27 @@ class SafetyDemographicsInteractionModel:
         train_data = self.merged_data[self.merged_data['train'] == 1].copy()
         test_data = self.merged_data[self.merged_data['test'] == 1].copy()
         
-        train_data, interaction_features = self.create_demographic_dummy_variables(train_data)
-        test_data, _ = self.create_demographic_dummy_variables(test_data)
+        train_data, interaction_features, main_effect_features = self.create_demographic_dummy_variables(train_data)
         
-        features = self.original_model_features + interaction_features + ['SAFETY_SCORE']
+        # The test data needs to have the same columns as the training data.
+        # We create dummies on test, then align columns.
+        test_data, _, _ = self.create_demographic_dummy_variables(test_data)
+        
+        # Align columns - crucial for consistent model evaluation
+        train_cols = set(train_data.columns)
+        test_cols = set(test_data.columns)
+        
+        missing_in_test = train_cols - test_cols
+        for c in missing_in_test:
+            test_data[c] = 0
+            
+        extra_in_test = test_cols - train_cols
+        test_data = test_data.drop(columns=list(extra_in_test))
+        
+        # Ensure order is the same
+        test_data = test_data[train_data.columns]
+
+        features = self.original_model_features + interaction_features + main_effect_features + ['SAFETY_SCORE']
         
         # Prepare panel data
         _, biodata_wide, obs_per_ind = prepare_panel_data(train_data, self.individual_id, 'CHOICE', features)
@@ -326,7 +351,7 @@ class SafetyDemographicsInteractionModel:
         random_params = {p: (Beta(f'B_{p}', c['mean_init'], None,None,0) + Beta(f'sigma_{p}', c['sigma_init'], None,None,0) * bioDraws(f'{p}_rnd', 'NORMAL_HALTON2')) 
                          for p, c in random_params_config.items()}
         
-        fixed_features = self.original_model_features + interaction_features
+        fixed_features = self.original_model_features + interaction_features + main_effect_features
         fixed_params = {f: Beta(f"B_{f.replace(' - ', '___').replace(' ', '_')}", 0, None,None,0) for f in fixed_features}
 
         V = []
@@ -415,7 +440,7 @@ class SafetyDemographicsInteractionModel:
         self.load_trained_model_data()
         self.load_and_prepare_data()
         self.estimate_interaction_model()
-        self.generate_results_table()
+        # self.generate_results_table()
         print(f"\n✓ Analysis complete. Results saved to: {self.output_dir}")
 
 def main():
