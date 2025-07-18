@@ -1122,8 +1122,8 @@ class PostModelingAnalyzer:
         sm.set_array([])
         
         cbar = fig.colorbar(sm, cax=cbar_ax, orientation='horizontal')
-        cbar.set_label('Grad-CAM Intensity', fontsize=12, labelpad=5)
-        cbar.ax.tick_params(labelsize=10)
+        cbar.set_label('Grad-CAM Intensity', fontsize=16, labelpad=5, fontweight="bold")
+        cbar.ax.tick_params(labelsize=14)
 
         # --- Left Column: Segmentation Legend ---
         legend_ax = fig.add_axes([0.05, 0.0, 0.55, 0.12])
@@ -1168,7 +1168,7 @@ class PostModelingAnalyzer:
             
             # Text label
             legend_ax.text(x_pos + 0.05, y_pos + 0.08, label.name, 
-                           transform=legend_ax.transAxes, fontsize=11, va='center')
+                           transform=legend_ax.transAxes, fontsize=15, fontweight = "bold", va='center')
 
     def _create_image_grid_figure_with_cam(self, merged_data, grouping_col, unique_groups, n_groups, figure_num, title):
         """Helper function to create image grid with Grad-CAM overlays."""
@@ -1351,30 +1351,30 @@ class PostModelingAnalyzer:
         # Create all figures
         results = {}
         
-        # Figures 1-3: Utility comparisons and model corrections
-        results['combined_model_comparison'] = self.create_figure_1()
-        # Figure 2 is now merged into Figure 1, so we skip it
-        results['model_corrections'] = self.create_figure_3()
+        # # Figures 1-3: Utility comparisons and model corrections
+        # results['combined_model_comparison'] = self.create_figure_1()
+        # # Figure 2 is now merged into Figure 1, so we skip it
+        # results['model_corrections'] = self.create_figure_3()
         
-        # Figures 4-5: Safety score distributions
-        results['safety_by_wegtype'] = self.create_figure_4()
-        results['safety_by_buildenvironment'] = self.create_figure_5()
+        # # Figures 4-5: Safety score distributions
+        # results['safety_by_wegtype'] = self.create_figure_4()
+        # results['safety_by_buildenvironment'] = self.create_figure_5()
         
-        # Figure 6: Scatter plot matrix
-        results['scatter_matrix'] = self.create_figure_6()
+        # # Figure 6: Scatter plot matrix
+        # results['scatter_matrix'] = self.create_figure_6()
         
         # Figures 7-8: Image grids
         results['image_grid_wegtype'] = self.create_figure_7()
         results['image_grid_buildenvironment'] = self.create_figure_8()
         
-        # Figure 9: 3D scatter plot
-        results['3d_scatter'] = self.create_figure_9_3d_scatter()
+        # # Figure 9: 3D scatter plot
+        # results['3d_scatter'] = self.create_figure_9_3d_scatter()
         
-        # Figure 10: 4D scatter plot
-        results['4d_scatter'] = self.create_figure_10_4d_scatter()
+        # # Figure 10: 4D scatter plot
+        # results['4d_scatter'] = self.create_figure_10_4d_scatter()
         
-        # Create summary statistics
-        results['statistics'] = self.create_summary_statistics()
+        # # Create summary statistics
+        # results['statistics'] = self.create_summary_statistics()
         
         print("\n=== ANALYSIS COMPLETED ===")
         print(f"All 10 figures and statistics saved to: {self.output_dir}")

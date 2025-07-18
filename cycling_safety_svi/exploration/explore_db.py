@@ -176,6 +176,150 @@ def display_database_overview(db_path):
     # Close the connection
     conn.close()
 
+def get_demographic_mappings():
+    """
+    Returns the demographic mappings dictionary.
+    
+    This is copied from SafetyDemographicsInteractionModel to avoid instantiating the class.
+    """
+    return {
+        'age': {
+            1: '18-30 years', 2: '31-45 years', 3: '46-60 years', 
+            4: '61-75 years', 5: '76+ years'
+        },
+        'gender': {
+            1: 'Male', 2: 'Female', 3: 'Other', 4: 'Prefer not to say'
+        },
+        'household_composition': {
+            1: 'Live alone', 2: 'Couple without children', 3: 'Couple with children',
+            4: 'One adult with children', 5: 'Two or more adults (not couple)', 6: 'Other'
+        },
+        'household_size': {
+            1: '1 person', 2: '2 people', 3: '3 people', 
+            4: '4 people', 5: '5 people', 6: '6+ people'
+        },
+        'education': {
+            1: 'No education', 2: 'Primary education', 3: 'Lower vocational',
+            4: 'Lower secondary', 5: 'Intermediate vocational', 6: 'MULO or MMS',
+            7: 'HAVO', 8: 'HBS, VWO, etc.', 9: 'Higher vocational (HBO)',
+            10: 'University', 11: 'M.Sc.', 12: 'Ph.D.',
+            13: 'Other', 14: 'Prefer not to say'
+        },
+        'income': {
+            1: '< €1,250', 2: '€1,251-€1,700', 3: '€1,701-€2,250',
+            4: '€2,251-€3,650', 5: '€3,651-€7,000', 6: '> €7,001',
+            7: 'Unknown', 8: 'Prefer not to say'
+        },
+        'bills': {
+            1: 'Very easy', 2: 'Easy', 3: 'Reasonable', 
+            4: 'Difficult', 5: 'Very difficult', 6: 'Unknown'
+        },
+        'transportation': {
+            1: 'Walking', 2: 'Bike', 3: 'Public transport', 4: 'Car', 5: 'Other'
+        },
+        'car': {
+            1: 'No cars', 2: '1 car', 3: '2 cars', 4: '3+ cars'
+        },
+        'traveltime': {
+            1: 'No commute', 2: '< 10 min', 3: '10-20 min',
+            4: '20-30 min', 5: '30-40 min'
+        },
+        'commutingdays': {
+            1: 'No commute', 2: '1 day/week', 3: '2 days/week',
+            4: '3 days/week', 5: '4 days/week', 6: '5+ days/week'
+        },
+        'cycler': {
+            1: 'Do not cycle', 2: '< 1/week', 3: '1 day/week',
+            4: '2 days/week', 5: '3 days/week', 6: '4 days/week',
+            7: '5+ days/week'
+        },
+        'cyclingincident': {
+            1: 'Yes, severe', 2: 'Yes, mild', 3: 'No'
+        },
+        'cyclinglike': {1: 'Yes', 2: 'No'},
+        'cyclingunsafe': {
+            1: 'Yes, sometimes', 2: 'Yes, evening/night', 3: 'No'
+        },
+        'biketype': {
+            1: 'Regular bike', 2: 'Racing bike', 3: 'E-bike', 
+            4: 'Fatbike', 5: 'Other'
+        },
+        'trippurpose': {
+            1: 'Commuting', 2: 'Errands', 3: 'Recreational', 4: 'Other'
+        }
+    }
+
+def save_response_data_as_latex(db_path, output_dir='reports/models'):
+    """
+    Saves the first 5 rows of the Response table as a LaTeX file.
+
+    This function selects only the columns relevant to the safety-demographics
+    interaction model, formats them, and saves them as a .tex file.
+
+    Args:
+        db_path (str): Path to the SQLite database.
+        output_dir (str): Directory to save the output file.
+    """
+    logger.info("Generating LaTeX sample table from Response data...")
+    conn = connect_to_database(db_path)
+    
+    demographic_mappings = get_demographic_mappings()
+    
+    # Columns used in safety_demographics_interaction_model.py plus response columns
+    relevant_columns = list(demographic_mappings.keys())
+    if 'work' in relevant_columns:
+        relevant_columns.remove('work')
+
+    query_columns = relevant_columns + ['resp_main_1', 'resp_main_15']
+
+    try:
+        query = f"SELECT {', '.join(query_columns)} FROM Response LIMIT 5"
+        df = pd.read_sql_query(query, conn)
+    except Exception as e:
+        logger.error(f"Failed to query Response table: {e}")
+        return
+    finally:
+        conn.close()
+
+    # Drop rows with NaN before processing
+    df.dropna(inplace=True)
+
+    # Map integer codes to string categories
+    for col, mapping in demographic_mappings.items():
+        if col in df.columns:
+            df[col] = df[col].astype(int).map(mapping)
+
+    # Add '...' column and reorder
+    if 'resp_main_15' in df.columns:
+        df.insert(df.columns.get_loc('resp_main_15'), '...', '...')
+
+    # Prettify column names
+    df.columns = [col.replace('_', ' ').title() for col in df.columns]
+
+    # Generate and save LaTeX table
+    output_path = Path(output_dir) / 'response_data_sample.tex'
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    latex_string = df.to_latex(
+        index=False,
+        caption='Sample of Demographics Data from the Response Table.',
+        label='tab:demographics_sample',
+        position='htbp',
+        longtable=True,
+        escape=False
+    )
+    
+    # Use resizebox for wide tables
+    if len(df.columns) > 10:
+        latex_string = latex_string.replace('\\begin{longtable}', '\\resizebox{\\textwidth}{!}{\\begin{tabular}')
+        latex_string = latex_string.replace('\\end{longtable}', '\\end{tabular}}')
+        latex_string = latex_string.replace('{longtable}', '{tabular}')
+    
+    with open(output_path, 'w') as f:
+        f.write(latex_string)
+    
+    logger.info(f"Successfully saved sample response data to {output_path}")
+
 def analyze_relationships(db_path):
     """
     Analyze potential relationships between tables
@@ -249,6 +393,8 @@ def main():
                         help='Path to SQLite database file')
     parser.add_argument('--analyze-relationships', action='store_true',
                         help='Analyze potential relationships between tables')
+    parser.add_argument('--save-latex', action='store_true', default=True,
+                        help='Save a LaTeX sample of the Response table')
     
     args = parser.parse_args()
     
@@ -264,6 +410,10 @@ def main():
             print(tabulate(relationships, headers="keys", tablefmt="grid"))
         else:
             print("No potential relationships detected.")
+
+    # Save LaTeX table if requested
+    if args.save_latex:
+        save_response_data_as_latex(args.db_path)
 
 if __name__ == "__main__":
     main() 
