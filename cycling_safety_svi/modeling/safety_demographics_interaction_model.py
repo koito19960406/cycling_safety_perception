@@ -271,7 +271,6 @@ class SafetyDemographicsInteractionModel:
         print(f"Creating dummy variables and interaction terms for group: {self.model_group}...")
         
         interaction_features = []
-        main_effect_features = []
         
         def create_dummies(feature, ref_cat):
             cat_col = f'{feature}_cat'
@@ -284,7 +283,6 @@ class SafetyDemographicsInteractionModel:
                 
                 data[f'{dummy_name}_1'] = (data[cat_col] == cat).astype(int)
                 data[f'{dummy_name}_2'] = data[f'{dummy_name}_1']
-                main_effect_features.append(dummy_name)
                 
                 interact_name = f"safety_{dummy_name}"
                 data[f'{interact_name}_1'] = data['SAFETY_SCORE_1'] * data[f'{dummy_name}_1']
@@ -309,7 +307,7 @@ class SafetyDemographicsInteractionModel:
                 else:
                     print(f"Warning: Could not find a valid reference category for '{demo}'. Skipping dummy creation.")
 
-        return data, interaction_features, main_effect_features
+        return data, interaction_features
 
     def estimate_interaction_model(self):
         """Estimate the MXL safety * demographics interaction model."""
@@ -318,11 +316,11 @@ class SafetyDemographicsInteractionModel:
         train_data = self.merged_data[self.merged_data['train'] == 1].copy()
         test_data = self.merged_data[self.merged_data['test'] == 1].copy()
         
-        train_data, interaction_features, main_effect_features = self.create_demographic_dummy_variables(train_data)
+        train_data, interaction_features = self.create_demographic_dummy_variables(train_data)
         
         # The test data needs to have the same columns as the training data.
         # We create dummies on test, then align columns.
-        test_data, _, _ = self.create_demographic_dummy_variables(test_data)
+        test_data, _ = self.create_demographic_dummy_variables(test_data)
         
         # Align columns - crucial for consistent model evaluation
         train_cols = set(train_data.columns)
@@ -338,7 +336,7 @@ class SafetyDemographicsInteractionModel:
         # Ensure order is the same
         test_data = test_data[train_data.columns]
 
-        features = self.original_model_features + interaction_features + main_effect_features + ['SAFETY_SCORE']
+        features = self.original_model_features + interaction_features + ['SAFETY_SCORE']
         
         # Prepare panel data
         _, biodata_wide, obs_per_ind = prepare_panel_data(train_data, self.individual_id, 'CHOICE', features)
@@ -351,7 +349,7 @@ class SafetyDemographicsInteractionModel:
         random_params = {p: (Beta(f'B_{p}', c['mean_init'], None,None,0) + Beta(f'sigma_{p}', c['sigma_init'], None,None,0) * bioDraws(f'{p}_rnd', 'NORMAL_HALTON2')) 
                          for p, c in random_params_config.items()}
         
-        fixed_features = self.original_model_features + interaction_features + main_effect_features
+        fixed_features = self.original_model_features + interaction_features
         fixed_params = {f: Beta(f"B_{f.replace(' - ', '___').replace(' ', '_')}", 0, None,None,0) for f in fixed_features}
 
         V = []
@@ -451,11 +449,11 @@ def main():
     args = parser.parse_args()
 
     model_groups = {
-        "demographic_age": ["age"],
-        "demographic_gender": ["gender"],
-        "demographic_household_composition": ["household_composition"],
-        "demographic_household_size": ["household_size"],
-        "socioeconomic_education": ["education"],
+        # "demographic_age": ["age"],
+        # "demographic_gender": ["gender"],
+        # "demographic_household_composition": ["household_composition"],
+        # "demographic_household_size": ["household_size"],
+        # "socioeconomic_education": ["education"],
         "socioeconomic_income": ["income"],
         "socioeconomic_bills": ["bills"],
         "cycling_experience_cyclingincident": ["cyclingincident"],
