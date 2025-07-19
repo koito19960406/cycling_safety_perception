@@ -108,6 +108,38 @@ def simulate_mxl(V, AV, CHOICE, obs_per_ind, num_draws, biodata_wide, betas, mod
     Returns:
         Dictionary with simulation results and fit measures
     """
+    # Filter betas to only include parameters for features present in test data
+    # Extract base feature names from biodata variables (pattern: feature_alt_obs)
+    available_features = set()
+    for var_name in biodata_wide.variables:
+        # Remove the _alt_obs suffix to get base feature name
+        parts = var_name.split('_')
+        if len(parts) >= 3:
+            # Rejoin all parts except the last two (which are alt and obs)
+            base_feature = '_'.join(parts[:-2])
+            available_features.add(base_feature)
+    
+    # Filter betas to only include parameters for available features
+    filtered_betas = {}
+    for param_name, param_value in betas.items():
+        # Check if this parameter corresponds to an available feature
+        if param_name.startswith('B_'):
+            feature_name = param_name[2:]  # Remove 'B_' prefix
+            if feature_name in available_features:
+                filtered_betas[param_name] = param_value
+        elif param_name.startswith('sigma_'):
+            # Keep sigma parameters (for random parameters)
+            filtered_betas[param_name] = param_value
+        else:
+            # Keep other parameters (like constants)
+            filtered_betas[param_name] = param_value
+    
+    print(f"Filtered betas from {len(betas)} to {len(filtered_betas)} parameters")
+    print(f"Available features in test data: {sorted(available_features)}")
+    
+    # Use filtered betas for simulation
+    betas = filtered_betas
+
     # The conditional probability of the chosen alternative is a logit
     condProb = [models.loglogit(V[q], AV, Variable(f'{CHOICE}_{q}')) for q in range(obs_per_ind)] 
 

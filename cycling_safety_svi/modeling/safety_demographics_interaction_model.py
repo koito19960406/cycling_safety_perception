@@ -137,6 +137,7 @@ class SafetyDemographicsInteractionModel:
             model_results = pickle.load(f)
         
         self.original_model_features = self._extract_model_features(model_results)
+        print(self.original_model_features)
         print(f"✓ Extracted {len(self.original_model_features)} segmentation features from base model.")
 
     def _extract_model_features(self, model_results):
@@ -176,10 +177,12 @@ class SafetyDemographicsInteractionModel:
             seg_chunks = [chunk for chunk in pd.read_csv(segmentation_path, chunksize=1000)]
             self.segmentation_data = pd.concat(seg_chunks, ignore_index=True)
             self.segmentation_data['filename_key'] = self.segmentation_data['filename_key'].str.strip()
+            # replace " " with "_" in column names
+            self.segmentation_data.columns = [col.replace(' ', '_').replace('___', ' - ') for col in self.segmentation_data.columns]
         else:
             self.segmentation_data = None
             print("No segmentation features in base model, skipping segmentation data.")
-        
+
         self._merge_all_datasets()
         self._process_demographics()
         print(f"Final dataset prepared with {len(self.merged_data)} observations.")
@@ -340,6 +343,7 @@ class SafetyDemographicsInteractionModel:
         
         # Prepare panel data
         _, biodata_wide, obs_per_ind = prepare_panel_data(train_data, self.individual_id, 'CHOICE', features)
+        _, test_biodata_wide, _ = prepare_panel_data(test_data, self.individual_id, 'CHOICE', features)
         
         # Define parameters and utility
         random_params_config = {
@@ -352,29 +356,54 @@ class SafetyDemographicsInteractionModel:
         fixed_features = self.original_model_features + interaction_features
         fixed_params = {f: Beta(f"B_{f.replace(' - ', '___').replace(' ', '_')}", 0, None,None,0) for f in fixed_features}
 
-        V = []
+        # Create utility function for TRAINING data
+        V_train = []
         for q in range(obs_per_ind):
             V1, V2 = 0, 0
-            # Random
+            # Random parameters
             for name, param in random_params.items():
                 scale = 10 if name == 'TT' else (3 if name == 'TL' else 1)
                 v1_name, v2_name = f"{name}_1_{q}", f"{name}_2_{q}"
                 if v1_name in biodata_wide.variables:
                     V1 += param * Variable(v1_name) / scale
                     V2 += param * Variable(v2_name) / scale
-            # Fixed
+            # Fixed parameters
             for name, param in fixed_params.items():
                 v1_name, v2_name = f"{name}_1_{q}", f"{name}_2_{q}"
                 if v1_name in biodata_wide.variables:
                     V1 += param * Variable(v1_name)
                     V2 += param * Variable(v2_name)
-            V.append({1: V1, 2: V2})
+                else:
+                    print(f"Warning: Variable {v1_name} not found in training biodata_wide, skipping.")
+            V_train.append({1: V1, 2: V2})
 
-        # Estimate and simulate
+        # Create utility function for TEST data  
+        V_test = []
+        for q in range(obs_per_ind):
+            V1, V2 = 0, 0
+            # Random parameters
+            for name, param in random_params.items():
+                scale = 10 if name == 'TT' else (3 if name == 'TL' else 1)
+                v1_name, v2_name = f"{name}_1_{q}", f"{name}_2_{q}"
+                if v1_name in test_biodata_wide.variables:
+                    V1 += param * Variable(v1_name) / scale
+                    V2 += param * Variable(v2_name) / scale
+            # Fixed parameters
+            for name, param in fixed_params.items():
+                v1_name, v2_name = f"{name}_1_{q}", f"{name}_2_{q}"
+                if v1_name in test_biodata_wide.variables:
+                    V1 += param * Variable(v1_name)
+                    V2 += param * Variable(v2_name)
+                else:
+                    print(f"Warning: Variable {v1_name} not found in test biodata_wide, skipping.")
+            V_test.append({1: V1, 2: V2})
+
+        # Estimate using training data and V_train
         model_name = f'demographics_interaction_{self.model_group}'
-        results = estimate_mxl(V, {1:1, 2:1}, 'CHOICE', obs_per_ind, self.num_draws, biodata_wide, model_name, self.output_dir)
-        _, test_biodata_wide, _ = prepare_panel_data(test_data, self.individual_id, 'CHOICE', features)
-        test_sim_results = simulate_mxl(V, {1:1,2:1}, 'CHOICE', obs_per_ind, self.num_draws, test_biodata_wide, results.get_beta_values(), model_name)
+        results = estimate_mxl(V_train, {1:1, 2:1}, 'CHOICE', obs_per_ind, self.num_draws, biodata_wide, model_name, self.output_dir)
+        
+        # Simulate using test data and V_test
+        test_sim_results = simulate_mxl(V_test, {1:1,2:1}, 'CHOICE', obs_per_ind, self.num_draws, test_biodata_wide, results.get_beta_values(), model_name)
         
         self.results = (results, test_sim_results, obs_per_ind)
         print_mxl_results(results)
@@ -438,7 +467,7 @@ class SafetyDemographicsInteractionModel:
         self.load_trained_model_data()
         self.load_and_prepare_data()
         self.estimate_interaction_model()
-        # self.generate_results_table()
+        self.generate_results_table()
         print(f"\n✓ Analysis complete. Results saved to: {self.output_dir}")
 
 def main():
@@ -449,11 +478,11 @@ def main():
     args = parser.parse_args()
 
     model_groups = {
-        # "demographic_age": ["age"],
-        # "demographic_gender": ["gender"],
-        # "demographic_household_composition": ["household_composition"],
-        # "demographic_household_size": ["household_size"],
-        # "socioeconomic_education": ["education"],
+        "demographic_age": ["age"],
+        "demographic_gender": ["gender"],
+        "demographic_household_composition": ["household_composition"],
+        "demographic_household_size": ["household_size"],
+        "socioeconomic_education": ["education"],
         "socioeconomic_income": ["income"],
         "socioeconomic_bills": ["bills"],
         "cycling_experience_cyclingincident": ["cyclingincident"],
