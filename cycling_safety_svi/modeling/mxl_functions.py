@@ -184,23 +184,11 @@ def prepare_panel_data(dataframe, individual_id='RID', choice_var='CHOICE', feat
     # Rename the columns to run from columnname_{0} to columnname_{n}
     renumbered_columns = {}
     for col in df_wide.columns:
-        # Handle two patterns:
-        # 1. Columns starting with digit_underscore: '1_CHOICE' -> 'CHOICE_0'
-        # 2. Columns ending with underscore_digit: 'Traffic_Sign_(Front)_2' -> 'Traffic_Sign_(Front)_1'
-        
-        # First check if column starts with digit_underscore (original pattern)
-        first_split = col.split('_', 1)
-        if len(first_split) == 2 and first_split[0].isdigit():
-            obs_index = int(first_split[0]) - 1
-            var_name = first_split[1]
+        parts = col.split('_', 1)
+        if len(parts) == 2 and parts[0].isdigit():
+            obs_index = int(parts[0]) - 1
+            var_name = parts[1]
             renumbered_columns[col] = f'{var_name}_{obs_index}'
-        else:
-            # Check if column ends with underscore_digit (new pattern for complex feature names)
-            last_split = col.rsplit('_', 1)
-            if len(last_split) == 2 and last_split[1].isdigit():
-                obs_index = int(last_split[1]) - 1
-                var_name = last_split[0]
-                renumbered_columns[col] = f'{var_name}_{obs_index}'
 
     df_wide.rename(columns=renumbered_columns, inplace=True)
     

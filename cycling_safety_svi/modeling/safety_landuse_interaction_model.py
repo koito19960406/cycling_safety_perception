@@ -100,6 +100,8 @@ class SafetyLanduseInteractionModel:
             seg_chunks = [chunk for chunk in pd.read_csv(segmentation_path, chunksize=1000)]
             self.segmentation_data = pd.concat(seg_chunks, ignore_index=True)
             self.segmentation_data['filename_key'] = self.segmentation_data['filename_key'].str.strip()
+            # replace " " with "_" in column names
+            self.segmentation_data.columns = [col.replace(' ', '_').replace('___', ' - ') for col in self.segmentation_data.columns]
         else:
             self.segmentation_data = None
         
