@@ -26,7 +26,7 @@ from datetime import datetime
 
 # Import MXL functions
 from mxl_functions import (
-    estimate_mxl, simulate_mxl, prepare_panel_data, apply_data_cleaning,
+    estimate_mxl, prepare_panel_data, apply_data_cleaning,
     extract_mxl_metrics, print_mxl_results
 )
 
@@ -74,11 +74,6 @@ class ChoiceModelBenchmark:
         self.choice_data = self.choice_data.reset_index(drop=True)
         print(f"Index reset after cleaning. New shape: {self.choice_data.shape}")
         
-        # Print train/test split after cleaning
-        train_count = self.choice_data[self.choice_data['train'] == 1].shape[0]
-        test_count = self.choice_data[self.choice_data['test'] == 1].shape[0]
-        print(f"After cleaning - Training observations: {train_count}, Test observations: {test_count}")
-
         # Load safety scores
         self.safety_scores = pd.read_csv(safety_scores_path)
         self.safety_scores['image_name'] = self.safety_scores['image_name'].str.strip()
@@ -319,7 +314,8 @@ class ChoiceModelBenchmark:
         }
         beta_to_feature_map['B_SAFETY_SCORE'] = 'SAFETY_SCORE'
         
-        train_data = self.merged_data[self.merged_data['train'] == 1].copy()
+        # Use the full dataset for backward elimination
+        model_data_full = self.merged_data.copy()
         
         # Start with all available segmentation features + safety
         features_to_consider = self.seg_features + ['SAFETY_SCORE']
@@ -337,7 +333,7 @@ class ChoiceModelBenchmark:
             if 'SAFETY_SCORE' in features_to_consider:
                 attributes.extend(['safety_score_1', 'safety_score_2'])
                 
-            model_data = train_data[attributes].copy().dropna()
+            model_data = model_data_full[attributes].copy().dropna()
             
             database = db.Database('backward_elimination', model_data)
             
@@ -373,6 +369,9 @@ class ChoiceModelBenchmark:
             prob = models.logit(V, {1: 1, 2: 1}, Variable('CHOICE'))
             biogeme = bio.BIOGEME(database, log(prob))
             biogeme.modelName = f"elimination_{len(features_to_consider)}"
+            biogeme.generate_pickle = False
+            biogeme.generate_html = False
+            biogeme.save_iterations = False
             results = biogeme.estimate(verbose=False)
             
             # Check for significance using robust p-values
@@ -447,9 +446,8 @@ class ChoiceModelBenchmark:
 
     def _estimate_final_mxl(self, features, model_name):
         """Helper to estimate a single final MXL model."""
-        train_data = self.merged_data[self.merged_data['train'] == 1].copy()
         
-        attributes = [self.individual_id, 'TL1', 'TT1', 'TL2', 'TT2', 'CHOICE', 'train', 'test']
+        attributes = [self.individual_id, 'TL1', 'TT1', 'TL2', 'TT2', 'CHOICE']
         seg_features = [f for f in features if f not in ['TT', 'TL', 'SAFETY_SCORE']]
         
         for feature in seg_features:
@@ -465,13 +463,13 @@ class ChoiceModelBenchmark:
         })
 
         _, biodata_wide, obs_per_ind = prepare_panel_data(
-            model_data[model_data['train'] == 1], self.individual_id, 'CHOICE'
+            model_data, self.individual_id, 'CHOICE'
         )
 
         # Define random parameters
         random_params_config = {
-            'TT': {'mean_init': -0.2, 'sigma_init': 0.1, 'dist': 'normal'},
-            'TL': {'mean_init': -0.3, 'sigma_init': 0.1, 'dist': 'normal'}
+            'TT': {'mean_init': -1, 'sigma_init': 0.1, 'dist': 'lognormal'},
+            'TL': {'mean_init': -1, 'sigma_init': 0.1, 'dist': 'lognormal'}
         }
         if 'SAFETY_SCORE' in features:
             random_params_config['SAFETY_SCORE'] = {'mean_init': 1.0, 'sigma_init': 0.1, 'dist': 'normal'}
@@ -481,7 +479,10 @@ class ChoiceModelBenchmark:
             mean = Beta(f'B_{param}', config['mean_init'], None, None, 0)
             sigma = Beta(f'sigma_{param}', config['sigma_init'], None, None, 0)
             draws = bioDraws(f'{param}_rnd', 'NORMAL_HALTON2')
-            random_params[param] = mean + sigma * draws
+            if config['dist'] == 'lognormal':
+                random_params[param] = -exp(mean + sigma * draws)
+            else:
+                random_params[param] = mean + sigma * draws
             
         # Define fixed parameters
         fixed_params = {
@@ -510,16 +511,7 @@ class ChoiceModelBenchmark:
 
         results = estimate_mxl(V, {1:1, 2:1}, 'CHOICE', obs_per_ind, self.num_draws, biodata_wide, model_name, self.output_dir)
 
-        # Simulate on test data
-        _, test_biodata_wide, _ = prepare_panel_data(
-            model_data[model_data['test'] == 1], self.individual_id, 'CHOICE'
-        )
-        test_sim_results = simulate_mxl(
-            V, {1: 1, 2: 1}, 'CHOICE', obs_per_ind, self.num_draws,
-            test_biodata_wide, results.get_beta_values(), model_name
-        )
-
-        return results, test_sim_results, obs_per_ind
+        return results, obs_per_ind
 
     def generate_results_table(self):
         """Generates and saves a LaTeX table comparing the final models."""
@@ -543,10 +535,9 @@ class ChoiceModelBenchmark:
         model_params = {}
         all_param_names = set()
 
-        for name, (train_res, test_res, obs_per_ind) in models_to_report.items():
+        for name, (train_res, obs_per_ind) in models_to_report.items():
             model_metrics[name] = {
-                'train': extract_mxl_metrics(train_res, obs_per_ind, train_res.data.numberOfObservations),
-                'test': test_res
+                'train': extract_mxl_metrics(train_res, obs_per_ind, train_res.data.numberOfObservations)
             }
             params = train_res.get_estimated_parameters()
             model_params[name] = params
@@ -589,12 +580,9 @@ class ChoiceModelBenchmark:
         
         # Goodness of fit rows
         stats_to_report = {
-            'Sample size (Train)': ('train', 'n_observations', 'd'),
-            'Sample size (Test)': ('test', 'n_observations', 'd'),
-            'Log-Likelihood (Train)': ('train', 'log_likelihood', '.2f'),
-            'Log-Likelihood (Test)': ('test', 'log_likelihood', '.2f'),
-            'Rho-squared (Train)': ('train', 'pseudo_r2', '.4f'),
-            'Rho-squared (Test)': ('test', 'pseudo_r2', '.4f')
+            'Sample size': ('train', 'n_observations', 'd'),
+            'Log-Likelihood': ('train', 'log_likelihood', '.2f'),
+            'Rho-squared': ('train', 'pseudo_r2', '.4f'),
         }
 
         for display_name, (dataset, key, fmt) in stats_to_report.items():

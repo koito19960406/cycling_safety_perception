@@ -21,7 +21,7 @@ import biogeme.models as models
 from biogeme.expressions import Beta, Variable, log, exp, bioDraws
 
 from mxl_functions import (
-    estimate_mxl, simulate_mxl, prepare_panel_data, apply_data_cleaning,
+    estimate_mxl, prepare_panel_data, apply_data_cleaning,
     extract_mxl_metrics, print_mxl_results
 )
 
@@ -169,32 +169,33 @@ class SafetyLanduseInteractionModel:
         """Estimate the MXL safety * landuse interaction model."""
         print("\nEstimating Safety * Landuse Interaction Model (MXL)...")
         
-        train_data = self.merged_data[self.merged_data['train'] == 1].copy()
-        test_data = self.merged_data[self.merged_data['test'] == 1].copy()
+        model_data = self.merged_data.copy()
         
-        train_data, main_effects, interaction_effects = self.create_landuse_dummy_variables(train_data)
-        test_data, _, _ = self.create_landuse_dummy_variables(test_data)
+        model_data, main_effects, interaction_effects = self.create_landuse_dummy_variables(model_data)
 
         # Rename safety columns for consistency with panel data preparation
-        train_data.rename(columns={'safety_score_1': 'SAFETY_SCORE_1', 'safety_score_2': 'SAFETY_SCORE_2'}, inplace=True)
-        test_data.rename(columns={'safety_score_1': 'SAFETY_SCORE_1', 'safety_score_2': 'SAFETY_SCORE_2'}, inplace=True)
+        model_data.rename(columns={'safety_score_1': 'SAFETY_SCORE1', 'safety_score_2': 'SAFETY_SCORE2'}, inplace=True)
 
         base_features = ['TT', 'TL', 'SAFETY_SCORE']
         seg_features = [f.replace(' ', '_').replace('___', ' - ') for f in self.original_model_features]
         all_features = base_features + seg_features + main_effects + interaction_effects
         
-        _, biodata_wide, obs_per_ind = prepare_panel_data(train_data, self.individual_id, 'CHOICE', all_features)
+        _, biodata_wide, obs_per_ind = prepare_panel_data(model_data, self.individual_id, 'CHOICE', all_features)
         
         random_params_config = {
-            'TT': {'mean_init': -0.2, 'sigma_init': 0.1}, 
-            'TL': {'mean_init': -0.3, 'sigma_init': 0.1},
-            'SAFETY_SCORE': {'mean_init': 1.0, 'sigma_init': 0.1}
+            'TT': {'mean_init': -1, 'sigma_init': 0.1, 'dist': 'lognormal'}, 
+            'TL': {'mean_init': -1, 'sigma_init': 0.1, 'dist': 'lognormal'},
+            'SAFETY_SCORE': {'mean_init': 1.0, 'sigma_init': 0.1, 'dist': 'normal'}
         }
-        random_params = {
-            p: (Beta(f'B_{p}', c['mean_init'], None, None, 0) + 
-                Beta(f'sigma_{p}', c['sigma_init'], None, None, 0) * bioDraws(f'{p}_rnd', 'NORMAL_HALTON2')) 
-            for p, c in random_params_config.items()
-        }
+        random_params = {}
+        for p, c in random_params_config.items():
+            mean = Beta(f'B_{p}', c['mean_init'], None, None, 0)
+            sigma = Beta(f'sigma_{p}', c['sigma_init'], None, None, 0)
+            draws = bioDraws(f'{p}_rnd', 'NORMAL_HALTON2')
+            if c.get('dist') == 'lognormal':
+                random_params[p] = -exp(mean + sigma * draws)
+            else:
+                random_params[p] = mean + sigma * draws
         
         fixed_features = seg_features + main_effects + interaction_effects
         fixed_params = {f: Beta(f"B_{f.replace(' - ', '___').replace(' ', '_')}", 0, None, None, 0) for f in fixed_features}
@@ -205,7 +206,7 @@ class SafetyLanduseInteractionModel:
             # Random parameters (TT, TL, SAFETY_SCORE)
             for name, param in random_params.items():
                 scale = 10 if name == 'TT' else (3 if name == 'TL' else 1)
-                v1_name, v2_name = f"{name}_1_{q}", f"{name}_2_{q}"
+                v1_name, v2_name = f"{name}1_{q}", f"{name}2_{q}"
                 if v1_name in biodata_wide.variables and v2_name in biodata_wide.variables:
                     V1 += param * Variable(v1_name) / scale
                     V2 += param * Variable(v2_name) / scale
@@ -220,18 +221,14 @@ class SafetyLanduseInteractionModel:
 
         results = estimate_mxl(V, {1:1, 2:1}, 'CHOICE', obs_per_ind, self.num_draws, biodata_wide, 'landuse_interaction', self.output_dir)
         
-        _, test_biodata_wide, _ = prepare_panel_data(test_data, self.individual_id, 'CHOICE', all_features)
-        
-        test_sim_results = simulate_mxl(V, {1:1,2:1}, 'CHOICE', obs_per_ind, self.num_draws, test_biodata_wide, results.get_beta_values(), 'landuse_interaction')
-        
-        self.results = (results, test_sim_results, obs_per_ind)
+        self.results = (results, obs_per_ind)
         print_mxl_results(results)
 
     def generate_results_table(self):
         """Generates and saves a LaTeX table for the interaction model."""
         if not hasattr(self, 'results'): return
         print("\nGenerating results table...")
-        train_res, test_res, obs_per_ind = self.results
+        train_res, obs_per_ind = self.results
         
         train_metrics = extract_mxl_metrics(train_res, obs_per_ind, train_res.data.numberOfObservations)
         params = train_res.get_estimated_parameters()
@@ -252,12 +249,9 @@ class SafetyLanduseInteractionModel:
             "        \\midrule",
             "        \\multicolumn{2}{l}{\\textit{Goodness of fit}} \\\\",
             "        \\hline",
-            f"        Sample size (Train) & {train_metrics['n_observations']} \\\\",
-            f"        Sample size (Test) & {test_res['n_observations']} \\\\",
-            f"        Log-Likelihood (Train) & {train_metrics['log_likelihood']:.2f} \\\\",
-            f"        Log-Likelihood (Test) & {test_res['log_likelihood']:.2f} \\\\",
-            f"        Rho-squared (Train) & {train_metrics['pseudo_r2']:.4f} \\\\",
-            f"        Rho-squared (Test) & {test_res['pseudo_r2']:.4f} \\\\",
+            f"        Sample size & {train_metrics['n_observations']} \\\\",
+            f"        Log-Likelihood & {train_metrics['log_likelihood']:.2f} \\\\",
+            f"        Rho-squared & {train_metrics['pseudo_r2']:.4f} \\\\",
             "        \\hline",
             "        \\multicolumn{2}{l}{\\textit{Parameters}} \\\\",
             "        \\hline"

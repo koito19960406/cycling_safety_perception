@@ -26,7 +26,7 @@ from pathlib import Path
 from datetime import datetime
 import json
 from mxl_functions import (
-    estimate_mxl, simulate_mxl, prepare_panel_data, apply_data_cleaning,
+    estimate_mxl, prepare_panel_data, apply_data_cleaning,
     extract_mxl_metrics, print_mxl_results
 )
 
@@ -239,11 +239,11 @@ class SafetyDemographicsInteractionModel:
         merged_data = self.choice_data.merge(self.demographics, left_on='RID', right_on='set_id', how='inner')
         
         safety_dict = dict(zip(self.safety_scores['image_name'], self.safety_scores['safety_score']))
-        merged_data['SAFETY_SCORE_1'] = merged_data['IMG1'].map(safety_dict)
-        merged_data['SAFETY_SCORE_2'] = merged_data['IMG2'].map(safety_dict)
+        merged_data['SAFETY_SCORE1'] = merged_data['IMG1'].map(safety_dict)
+        merged_data['SAFETY_SCORE2'] = merged_data['IMG2'].map(safety_dict)
         mean_safety = self.safety_scores['safety_score'].mean()
-        merged_data['SAFETY_SCORE_1'].fillna(mean_safety, inplace=True)
-        merged_data['SAFETY_SCORE_2'].fillna(mean_safety, inplace=True)
+        merged_data['SAFETY_SCORE1'].fillna(mean_safety, inplace=True)
+        merged_data['SAFETY_SCORE2'].fillna(mean_safety, inplace=True)
         
         if self.segmentation_data is not None:
             segmentation_dict = {row['filename_key'] + '.jpg': row.drop('filename_key').to_dict() 
@@ -288,8 +288,8 @@ class SafetyDemographicsInteractionModel:
                 data[f'{dummy_name}_2'] = data[f'{dummy_name}_1']
                 
                 interact_name = f"safety_{dummy_name}"
-                data[f'{interact_name}_1'] = data['SAFETY_SCORE_1'] * data[f'{dummy_name}_1']
-                data[f'{interact_name}_2'] = data['SAFETY_SCORE_2'] * data[f'{dummy_name}_2']
+                data[f'{interact_name}_1'] = data['SAFETY_SCORE1'] * data[f'{dummy_name}_1']
+                data[f'{interact_name}_2'] = data['SAFETY_SCORE2'] * data[f'{dummy_name}_2']
                 interaction_features.append(interact_name)
             return cats
 
@@ -316,54 +316,42 @@ class SafetyDemographicsInteractionModel:
         """Estimate the MXL safety * demographics interaction model."""
         print("\nEstimating Safety * Demographics Interaction Model (MXL)...")
         
-        train_data = self.merged_data[self.merged_data['train'] == 1].copy()
-        test_data = self.merged_data[self.merged_data['test'] == 1].copy()
+        model_data = self.merged_data.copy()
         
-        train_data, interaction_features = self.create_demographic_dummy_variables(train_data)
-        
-        # The test data needs to have the same columns as the training data.
-        # We create dummies on test, then align columns.
-        test_data, _ = self.create_demographic_dummy_variables(test_data)
-        
-        # Align columns - crucial for consistent model evaluation
-        train_cols = set(train_data.columns)
-        test_cols = set(test_data.columns)
-        
-        missing_in_test = train_cols - test_cols
-        for c in missing_in_test:
-            test_data[c] = 0
-            
-        extra_in_test = test_cols - train_cols
-        test_data = test_data.drop(columns=list(extra_in_test))
-        
-        # Ensure order is the same
-        test_data = test_data[train_data.columns]
+        model_data, interaction_features = self.create_demographic_dummy_variables(model_data)
 
         features = self.original_model_features + interaction_features + ['SAFETY_SCORE']
         
         # Prepare panel data
-        _, biodata_wide, obs_per_ind = prepare_panel_data(train_data, self.individual_id, 'CHOICE', features)
-        _, test_biodata_wide, _ = prepare_panel_data(test_data, self.individual_id, 'CHOICE', features)
+        _, biodata_wide, obs_per_ind = prepare_panel_data(model_data, self.individual_id, 'CHOICE', features)
         
         # Define parameters and utility
         random_params_config = {
-            'TT': {'mean_init': -0.2, 'sigma_init': 0.1}, 'TL': {'mean_init': -0.3, 'sigma_init': 0.1},
-            'SAFETY_SCORE': {'mean_init': 1.0, 'sigma_init': 0.1}
+            'TT': {'mean_init': -1, 'sigma_init': 0.1, 'dist': 'lognormal'}, 
+            'TL': {'mean_init': -1, 'sigma_init': 0.1, 'dist': 'lognormal'},
+            'SAFETY_SCORE': {'mean_init': 1.0, 'sigma_init': 0.1, 'dist': 'normal'}
         }
-        random_params = {p: (Beta(f'B_{p}', c['mean_init'], None,None,0) + Beta(f'sigma_{p}', c['sigma_init'], None,None,0) * bioDraws(f'{p}_rnd', 'NORMAL_HALTON2')) 
-                         for p, c in random_params_config.items()}
-        
+        random_params = {}
+        for p, c in random_params_config.items():
+            mean = Beta(f'B_{p}', c['mean_init'], None,None,0)
+            sigma = Beta(f'sigma_{p}', c['sigma_init'], None,None,0)
+            draws = bioDraws(f'{p}_rnd', 'NORMAL_HALTON2')
+            if c.get('dist') == 'lognormal':
+                random_params[p] = -exp(mean + sigma * draws)
+            else:
+                random_params[p] = mean + sigma * draws
+
         fixed_features = self.original_model_features + interaction_features
         fixed_params = {f: Beta(f"B_{f.replace(' - ', '___').replace(' ', '_')}", 0, None,None,0) for f in fixed_features}
 
-        # Create utility function for TRAINING data
-        V_train = []
+        # Create utility function
+        V = []
         for q in range(obs_per_ind):
             V1, V2 = 0, 0
             # Random parameters
             for name, param in random_params.items():
                 scale = 10 if name == 'TT' else (3 if name == 'TL' else 1)
-                v1_name, v2_name = f"{name}_1_{q}", f"{name}_2_{q}"
+                v1_name, v2_name = f"{name}1_{q}", f"{name}2_{q}"
                 if v1_name in biodata_wide.variables:
                     V1 += param * Variable(v1_name) / scale
                     V2 += param * Variable(v2_name) / scale
@@ -374,38 +362,14 @@ class SafetyDemographicsInteractionModel:
                     V1 += param * Variable(v1_name)
                     V2 += param * Variable(v2_name)
                 else:
-                    print(f"Warning: Variable {v1_name} not found in training biodata_wide, skipping.")
-            V_train.append({1: V1, 2: V2})
+                    print(f"Warning: Variable {v1_name} not found in biodata_wide, skipping.")
+            V.append({1: V1, 2: V2})
 
-        # Create utility function for TEST data  
-        V_test = []
-        for q in range(obs_per_ind):
-            V1, V2 = 0, 0
-            # Random parameters
-            for name, param in random_params.items():
-                scale = 10 if name == 'TT' else (3 if name == 'TL' else 1)
-                v1_name, v2_name = f"{name}_1_{q}", f"{name}_2_{q}"
-                if v1_name in test_biodata_wide.variables:
-                    V1 += param * Variable(v1_name) / scale
-                    V2 += param * Variable(v2_name) / scale
-            # Fixed parameters
-            for name, param in fixed_params.items():
-                v1_name, v2_name = f"{name}_1_{q}", f"{name}_2_{q}"
-                if v1_name in test_biodata_wide.variables:
-                    V1 += param * Variable(v1_name)
-                    V2 += param * Variable(v2_name)
-                else:
-                    print(f"Warning: Variable {v1_name} not found in test biodata_wide, skipping.")
-            V_test.append({1: V1, 2: V2})
-
-        # Estimate using training data and V_train
+        # Estimate model
         model_name = f'demographics_interaction_{self.model_group}'
-        results = estimate_mxl(V_train, {1:1, 2:1}, 'CHOICE', obs_per_ind, self.num_draws, biodata_wide, model_name, self.output_dir)
+        results = estimate_mxl(V, {1:1, 2:1}, 'CHOICE', obs_per_ind, self.num_draws, biodata_wide, model_name, self.output_dir)
         
-        # Simulate using test data and V_test
-        test_sim_results = simulate_mxl(V_test, {1:1,2:1}, 'CHOICE', obs_per_ind, self.num_draws, test_biodata_wide, results.get_beta_values(), model_name)
-        
-        self.results = (results, test_sim_results, obs_per_ind)
+        self.results = (results, obs_per_ind)
         print_mxl_results(results)
 
     def generate_results_table(self):
@@ -415,7 +379,7 @@ class SafetyDemographicsInteractionModel:
             return
 
         print("\nGenerating results table...")
-        train_res, test_res, obs_per_ind = self.results
+        train_res, obs_per_ind = self.results
         
         train_metrics = extract_mxl_metrics(train_res, obs_per_ind, train_res.data.numberOfObservations)
         params = train_res.get_estimated_parameters()
@@ -433,12 +397,9 @@ class SafetyDemographicsInteractionModel:
             "\\begin{tabular}{lc}", "\\toprule",
             "& \\textbf{Coefficient (t-stat)} \\\\", "\\midrule",
             "\\multicolumn{2}{l}{\\textit{Goodness of fit}} \\\\", "\\hline",
-            f"Sample size (Train) & {train_metrics['n_observations']} \\\\",
-            f"Sample size (Test) & {test_res['n_observations']} \\\\",
-            f"Log-Likelihood (Train) & {train_metrics['log_likelihood']:.2f} \\\\",
-            f"Log-Likelihood (Test) & {test_res['log_likelihood']:.2f} \\\\",
-            f"Rho-squared (Train) & {train_metrics['pseudo_r2']:.4f} \\\\",
-            f"Rho-squared (Test) & {test_res['pseudo_r2']:.4f} \\\\",
+            f"Sample size & {train_metrics['n_observations']} \\\\",
+            f"Log-Likelihood & {train_metrics['log_likelihood']:.2f} \\\\",
+            f"Rho-squared & {train_metrics['pseudo_r2']:.4f} \\\\",
             "\\hline", "\\multicolumn{2}{l}{\\textit{Parameters}} \\\\", "\\hline"
         ]
 
