@@ -434,7 +434,7 @@ class SafetyDemographicsInteractionModel:
 def main():
     parser = argparse.ArgumentParser(description='Run Safety-Demographics Interaction Model (MXL)')
     parser.add_argument('--model_path', type=str, 
-                        default='reports/models/mxl_choice_20250709_183213/final_full_model.pickle',
+                        default='reports/models/mxl_choice_20250725_122947/final_full_model.pickle',
                         help='Path to the trained base model pickle file')
     args = parser.parse_args()
 
