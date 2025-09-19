@@ -1,7 +1,5 @@
 ---
-description: 
-globs: 
-alwaysApply: true
+alwaysApply: false
 ---
 - In this project, I'm writing an academic paper. Please follow my instruction extremely closely without editing anything other than what I ask you to edit.
 - If you feel like you need a citation, please write "[Citation Needed]" at the end of the sentence.
