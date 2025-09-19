@@ -816,40 +816,62 @@ class ChoiceModelBenchmark:
         # Safety vs Travel Time WTP (from separate WTP space model)
         if hasattr(self, 'wtp_safety_tt_results'):
             results, obs_per_ind, cost_attr, wtp_attr = self.wtp_safety_tt_results
-            params = results.get_estimated_parameters()
             
-            # For log-normal distribution, mean = exp(mu + sigma^2/2)
-            # This is the direct WTP estimate from the WTP space model
-            mu = params.loc['mu']['Value']
-            sigma = params.loc['sigma']['Value']
-            mean_wtp = np.exp(mu + sigma**2/2)
+            # Extract mu and sigma from betas
+            mu_beta = None
+            sigma_beta = None
+            for beta in results.betas:
+                if beta.name == 'mu':
+                    mu_beta = beta
+                elif beta.name == 'sigma':
+                    sigma_beta = beta
             
-            self.wtp_metrics['safety_vs_tt'] = {
-                'mean_wtp_minutes_per_unit': mean_wtp,
-                'mu': mu,
-                'sigma': sigma,
-                'log_likelihood': results.logLike
-            }
-            print(f"WTP for Safety vs Travel Time: {mean_wtp:.3f} minutes per safety unit")
+            if mu_beta is not None and sigma_beta is not None:
+                # For log-normal distribution, mean = exp(mu + sigma^2/2)
+                # This is the direct WTP estimate from the WTP space model
+                mu = float(mu_beta.value)
+                sigma = float(sigma_beta.value)
+                mean_wtp = np.exp(mu + sigma**2/2)
+                
+                self.wtp_metrics['safety_vs_tt'] = {
+                    'mean_wtp_minutes_per_unit': mean_wtp,
+                    'mu': mu,
+                    'sigma': sigma,
+                    'log_likelihood': results.logLike
+                }
+                print(f"WTP for Safety vs Travel Time: {mean_wtp:.3f} minutes per safety unit")
+            else:
+                print("Warning: Could not find mu and sigma parameters in WTP model results")
         
         # Safety vs Traffic Lights WTP (from separate WTP space model)
         if hasattr(self, 'wtp_safety_tl_results'):
             results, obs_per_ind, cost_attr, wtp_attr = self.wtp_safety_tl_results
-            params = results.get_estimated_parameters()
             
-            # For log-normal distribution, mean = exp(mu + sigma^2/2)
-            # This is the direct WTP estimate from the WTP space model
-            mu = params.loc['mu']['Value']
-            sigma = params.loc['sigma']['Value']
-            mean_wtp = np.exp(mu + sigma**2/2)
+            # Extract mu and sigma from betas
+            mu_beta = None
+            sigma_beta = None
+            for beta in results.betas:
+                if beta.name == 'mu':
+                    mu_beta = beta
+                elif beta.name == 'sigma':
+                    sigma_beta = beta
             
-            self.wtp_metrics['safety_vs_tl'] = {
-                'mean_wtp_lights_per_unit': mean_wtp,
-                'mu': mu,
-                'sigma': sigma,
-                'log_likelihood': results.logLike
-            }
-            print(f"WTP for Safety vs Traffic Lights: {mean_wtp:.3f} traffic lights per safety unit")
+            if mu_beta is not None and sigma_beta is not None:
+                # For log-normal distribution, mean = exp(mu + sigma^2/2)
+                # This is the direct WTP estimate from the WTP space model
+                mu = float(mu_beta.value)
+                sigma = float(sigma_beta.value)
+                mean_wtp = np.exp(mu + sigma**2/2)
+                
+                self.wtp_metrics['safety_vs_tl'] = {
+                    'mean_wtp_lights_per_unit': mean_wtp,
+                    'mu': mu,
+                    'sigma': sigma,
+                    'log_likelihood': results.logLike
+                }
+                print(f"WTP for Safety vs Traffic Lights: {mean_wtp:.3f} traffic lights per safety unit")
+            else:
+                print("Warning: Could not find mu and sigma parameters in WTP model results")
 
     def generate_results_table(self):
         """Generates and saves a LaTeX table comparing the final models."""
@@ -877,9 +899,10 @@ class ChoiceModelBenchmark:
             model_metrics[name] = {
                 'train': extract_mxl_metrics(train_res, obs_per_ind, train_res.numberOfObservations)
             }
-            params = train_res.get_estimated_parameters()
-            model_params[name] = params
-            all_param_names.update(params.index)
+            # Use train_res.betas instead of get_estimated_parameters()
+            betas = train_res.betas
+            model_params[name] = betas
+            all_param_names.update([beta.name for beta in betas])
 
         all_param_names = sorted(list(all_param_names))
 
@@ -946,11 +969,18 @@ class ChoiceModelBenchmark:
             
             values = []
             for name in models_to_report.keys():
-                params = model_params[name]
-                if param in params.index:
-                    val = params.loc[param, 'Value']
-                    t = params.loc[param, 'Rob. t-test']
-                    p = params.loc[param, 'Rob. p-value']
+                betas = model_params[name]
+                # Find the beta object with matching name
+                beta_obj = None
+                for beta in betas:
+                    if beta.name == param:
+                        beta_obj = beta
+                        break
+                
+                if beta_obj is not None:
+                    val = float(beta_obj.value)
+                    t = float(beta_obj.robust_tTest)
+                    p = float(beta_obj.robust_pValue)
                     stars = format_p_value(p)
                     val_str = f"{val:.3f}{stars} ({t:.2f})"
                 else:
