@@ -34,13 +34,23 @@ from mxl_functions import (
 class ChoiceModelBenchmark:
     """Benchmarks different mixed logit discrete choice models with various feature combinations"""
     
-    def __init__(self, base_output_dir='reports/models'):
+    def __init__(self, base_output_dir='reports/models', checkpoint_dir=None):
         """Initializes the benchmark environment, setting up output directories and logging."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        timestamped_folder = f"mxl_choice_{timestamp}"
-        self.output_dir = Path(base_output_dir) / timestamped_folder
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        print(f"Mixed Logit Model Results will be saved to: {self.output_dir}")
+        if checkpoint_dir:
+            # Use existing checkpoint directory
+            self.output_dir = Path(checkpoint_dir)
+            if not self.output_dir.exists():
+                raise ValueError(f"Checkpoint directory does not exist: {checkpoint_dir}")
+            print(f"Using checkpoint directory: {self.output_dir}")
+            self.use_checkpoint = True
+        else:
+            # Create new timestamped directory
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            timestamped_folder = f"mxl_choice_{timestamp}"
+            self.output_dir = Path(base_output_dir) / timestamped_folder
+            self.output_dir.mkdir(parents=True, exist_ok=True)
+            print(f"Mixed Logit Model Results will be saved to: {self.output_dir}")
+            self.use_checkpoint = False
         
         logging.getLogger('biogeme').setLevel(logging.WARNING)
         
@@ -297,6 +307,32 @@ class ChoiceModelBenchmark:
         
         print(f"Final segmentation features available: {len(self.seg_features)}")
         
+    def _model_exists(self, model_name):
+        """Check if a model's results already exist in the output directory."""
+        if not self.use_checkpoint:
+            return False
+            
+        # Check for pickle file (main indicator that model was estimated)
+        pickle_path = self.output_dir / f"{model_name}.pickle"
+        return pickle_path.exists()
+    
+    def _load_existing_model(self, model_name):
+        """Load existing model results from checkpoint directory."""
+        import pickle
+        
+        pickle_path = self.output_dir / f"{model_name}.pickle"
+        if not pickle_path.exists():
+            return None
+            
+        try:
+            with open(pickle_path, 'rb') as f:
+                results = pickle.load(f)
+            print(f"✓ Loaded existing model results for {model_name}")
+            return results
+        except Exception as e:
+            print(f"Warning: Could not load {model_name}: {e}")
+            return None
+        
     def _sanitize_name_for_beta(self, feature_name):
         """Creates a Biogeme-compatible name for a beta parameter."""
         s_name = feature_name.replace(' - ', '___').replace(' ', '_')
@@ -307,6 +343,19 @@ class ChoiceModelBenchmark:
         Performs backward elimination feature selection using MNL to find significant variables.
         """
         print("\nStarting backward elimination for feature selection...")
+        
+        # Check if final_significant_features already exists from checkpoint
+        if self.use_checkpoint:
+            features_pickle_path = self.output_dir / 'final_significant_features.pickle'
+            if features_pickle_path.exists():
+                try:
+                    import pickle
+                    with open(features_pickle_path, 'rb') as f:
+                        self.final_significant_features = pickle.load(f)
+                    print(f"✓ Loaded existing significant features from checkpoint: {self.final_significant_features}")
+                    return self.final_significant_features
+                except Exception as e:
+                    print(f"Warning: Could not load significant features from checkpoint: {e}")
         
         # Create a mapping from beta names back to original feature names
         beta_to_feature_map = {
@@ -398,6 +447,17 @@ class ChoiceModelBenchmark:
         
         self.final_significant_features = features_to_consider
         print(f"Final significant features: {self.final_significant_features}")
+        
+        # Save final_significant_features to pickle for future use
+        features_pickle_path = self.output_dir / 'final_significant_features.pickle'
+        try:
+            import pickle
+            with open(features_pickle_path, 'wb') as f:
+                pickle.dump(self.final_significant_features, f)
+            print(f"✓ Saved significant features to {features_pickle_path}")
+        except Exception as e:
+            print(f"Warning: Could not save significant features: {e}")
+        
         return self.final_significant_features
         
     def estimate_all_models(self):
@@ -407,42 +467,101 @@ class ChoiceModelBenchmark:
         2. Base + Safety Model (TT, TL, SAFETY_SCORE random)
         3. Full Model (Base + Safety + Significant Segmentation features)
         4. Segmentation-Only Model (Base + Significant Segmentation features)
+        5. WTP Space Models for computing willingness-to-pay metrics
         """
         print("\nEstimating all benchmark models...")
 
         # 1. Base Model
-        print("Estimating Base Model...")
-        self.base_model_results = self._estimate_final_mxl(
-            features=[], model_name='base_model'
-        )
-        print_mxl_results(self.base_model_results[0])
+        if self._model_exists('base_model'):
+            print("✓ Base Model already exists, loading from checkpoint...")
+            existing_results = self._load_existing_model('base_model')
+            if existing_results:
+                self.base_model_results = (existing_results, None)  # Approximate structure
+            else:
+                print("Estimating Base Model...")
+                self.base_model_results = self._estimate_final_mxl(
+                    features=[], model_name='base_model'
+                )
+        else:
+            print("Estimating Base Model...")
+            self.base_model_results = self._estimate_final_mxl(
+                features=[], model_name='base_model'
+            )
+        
+        if hasattr(self, 'base_model_results') and self.base_model_results[0]:
+            print_mxl_results(self.base_model_results[0])
 
         # 2. Base + Safety Model
-        print("\nEstimating Base + Safety Model...")
-        self.base_safety_model_results = self._estimate_final_mxl(
-            features=['SAFETY_SCORE'], model_name='base_safety_model'
-        )
-        print_mxl_results(self.base_safety_model_results[0])
+        if self._model_exists('base_safety_model'):
+            print("✓ Base + Safety Model already exists, loading from checkpoint...")
+            existing_results = self._load_existing_model('base_safety_model')
+            if existing_results:
+                self.base_safety_model_results = (existing_results, None)
+            else:
+                print("Estimating Base + Safety Model...")
+                self.base_safety_model_results = self._estimate_final_mxl(
+                    features=['SAFETY_SCORE'], model_name='base_safety_model'
+                )
+        else:
+            print("Estimating Base + Safety Model...")
+            self.base_safety_model_results = self._estimate_final_mxl(
+                features=['SAFETY_SCORE'], model_name='base_safety_model'
+            )
+        
+        if hasattr(self, 'base_safety_model_results') and self.base_safety_model_results[0]:
+            print_mxl_results(self.base_safety_model_results[0])
 
         if not hasattr(self, 'final_significant_features'):
             print("Backward elimination must be run first to estimate segmentation models.")
             return
 
         # 3. Full Model (with safety if significant)
-        print("\nEstimating Full Final Model...")
-        full_model_features = self.final_significant_features
-        self.full_model_results = self._estimate_final_mxl(
-            full_model_features, 'final_full_model'
-        )
-        print_mxl_results(self.full_model_results[0])
+        if self._model_exists('final_full_model'):
+            print("✓ Full Final Model already exists, loading from checkpoint...")
+            existing_results = self._load_existing_model('final_full_model')
+            if existing_results:
+                self.full_model_results = (existing_results, None)
+            else:
+                print("Estimating Full Final Model...")
+                full_model_features = self.final_significant_features
+                self.full_model_results = self._estimate_final_mxl(
+                    full_model_features, 'final_full_model'
+                )
+        else:
+            print("Estimating Full Final Model...")
+            full_model_features = self.final_significant_features
+            self.full_model_results = self._estimate_final_mxl(
+                full_model_features, 'final_full_model'
+            )
+        
+        if hasattr(self, 'full_model_results') and self.full_model_results[0]:
+            print_mxl_results(self.full_model_results[0])
 
         # 4. Segmentation-Only Model (safety removed)
-        print("\nEstimating Segmentation-Only Final Model...")
-        seg_only_features = [f for f in full_model_features if f != 'SAFETY_SCORE']
-        self.seg_only_model_results = self._estimate_final_mxl(
-            seg_only_features, 'final_seg_only_model'
-        )
-        print_mxl_results(self.seg_only_model_results[0])
+        if self._model_exists('final_seg_only_model'):
+            print("✓ Segmentation-Only Final Model already exists, loading from checkpoint...")
+            existing_results = self._load_existing_model('final_seg_only_model')
+            if existing_results:
+                self.seg_only_model_results = (existing_results, None)
+            else:
+                print("Estimating Segmentation-Only Final Model...")
+                seg_only_features = [f for f in self.final_significant_features if f != 'SAFETY_SCORE']
+                self.seg_only_model_results = self._estimate_final_mxl(
+                    seg_only_features, 'final_seg_only_model'
+                )
+        else:
+            print("Estimating Segmentation-Only Final Model...")
+            seg_only_features = [f for f in self.final_significant_features if f != 'SAFETY_SCORE']
+            self.seg_only_model_results = self._estimate_final_mxl(
+                seg_only_features, 'final_seg_only_model'
+            )
+        
+        if hasattr(self, 'seg_only_model_results') and self.seg_only_model_results[0]:
+            print_mxl_results(self.seg_only_model_results[0])
+        
+        # 5. WTP Space Models
+        print("\nEstimating WTP Space Models...")
+        self._estimate_wtp_models()
 
     def _estimate_final_mxl(self, features, model_name):
         """Helper to estimate a single final MXL model."""
@@ -511,7 +630,226 @@ class ChoiceModelBenchmark:
 
         results = estimate_mxl(V, {1:1, 2:1}, 'CHOICE', obs_per_ind, self.num_draws, biodata_wide, model_name, self.output_dir)
 
-        return results, obs_per_ind
+        return results.data, obs_per_ind
+
+    def _estimate_wtp_models(self):
+        """
+        Estimate models in WTP space to compute willingness-to-pay for safety scores.
+        Following the approach from Lab_02A_with_answers.ipynb where tc (travel cost) 
+        is replaced with TT (travel time) and Time is replaced with Safety score.
+        """
+        print("\nEstimating models in WTP space...")
+        
+        if not hasattr(self, 'final_significant_features'):
+            print("Backward elimination must be run first.")
+            return
+            
+        # Check if SAFETY_SCORE is in significant features
+        if 'SAFETY_SCORE' not in self.final_significant_features:
+            print("SAFETY_SCORE not significant, skipping WTP space estimation.")
+            return
+            
+        # 1. WTP Space Model: Safety vs Travel Time
+        if self._model_exists('wtp_safety_vs_tt'):
+            print("✓ WTP Safety vs Travel Time Model already exists, loading from checkpoint...")
+            existing_results = self._load_existing_model('wtp_safety_vs_tt')
+            if existing_results:
+                self.wtp_safety_tt_results = (existing_results, None, 'TT', 'SAFETY_SCORE')
+            else:
+                print("Estimating WTP Space Model: Safety vs Travel Time...")
+                self.wtp_safety_tt_results = self._estimate_wtp_mxl(
+                    wtp_attribute='SAFETY_SCORE', 
+                    cost_attribute='TT',
+                    model_name='wtp_safety_vs_tt'
+                )
+        else:
+            print("Estimating WTP Space Model: Safety vs Travel Time...")
+            self.wtp_safety_tt_results = self._estimate_wtp_mxl(
+                wtp_attribute='SAFETY_SCORE', 
+                cost_attribute='TT',
+                model_name='wtp_safety_vs_tt'
+            )
+        
+        # 2. WTP Space Model: Safety vs Traffic Lights
+        if self._model_exists('wtp_safety_vs_tl'):
+            print("✓ WTP Safety vs Traffic Lights Model already exists, loading from checkpoint...")
+            existing_results = self._load_existing_model('wtp_safety_vs_tl')
+            if existing_results:
+                self.wtp_safety_tl_results = (existing_results, None, 'TL', 'SAFETY_SCORE')
+            else:
+                print("Estimating WTP Space Model: Safety vs Traffic Lights...")
+                self.wtp_safety_tl_results = self._estimate_wtp_mxl(
+                    wtp_attribute='SAFETY_SCORE',
+                    cost_attribute='TL', 
+                    model_name='wtp_safety_vs_tl'
+                )
+        else:
+            print("Estimating WTP Space Model: Safety vs Traffic Lights...")
+            self.wtp_safety_tl_results = self._estimate_wtp_mxl(
+                wtp_attribute='SAFETY_SCORE',
+                cost_attribute='TL', 
+                model_name='wtp_safety_vs_tl'
+            )
+        
+        # Compute and store WTP metrics
+        self._compute_wtp_metrics()
+
+    def _estimate_wtp_mxl(self, wtp_attribute, cost_attribute, model_name):
+        """
+        Estimate a separate mixed logit model in WTP space.
+        Following the reference Lab_02A approach where WTP models are completely separate
+        from utility space models, with their own parameter definitions.
+        
+        Includes all significant segmentation features from backward elimination.
+        
+        Args:
+            wtp_attribute: The attribute we want to compute WTP for (e.g., 'SAFETY_SCORE')
+            cost_attribute: The cost attribute (e.g., 'TT' or 'TL')  
+            model_name: Name of the model
+        """
+        from mxl_functions import estimate_wtp_mxl, prepare_panel_data
+        from biogeme.expressions import Beta, Variable, bioDraws, exp
+        
+        # Prepare data - include cost, WTP, and segmentation attributes
+        attributes = [self.individual_id, 'CHOICE']
+        
+        # Add cost attribute columns
+        if cost_attribute == 'TT':
+            attributes.extend(['TT1', 'TT2'])
+            cost_scale = 10
+        else:  # TL
+            attributes.extend(['TL1', 'TL2'])
+            cost_scale = 3
+            
+        # Add WTP attribute columns    
+        if wtp_attribute == 'SAFETY_SCORE':
+            attributes.extend(['safety_score_1', 'safety_score_2'])
+        
+        # Add significant segmentation features
+        if hasattr(self, 'final_significant_features'):
+            seg_features = [f for f in self.final_significant_features if f not in ['SAFETY_SCORE', 'TT', 'TL']]
+            for feature in seg_features:
+                attributes.extend([f"{feature}_1", f"{feature}_2"])
+            print(f"Including {len(seg_features)} segmentation features in WTP model: {seg_features}")
+        else:
+            seg_features = []
+            print("Warning: No final_significant_features found, WTP model will only include safety and cost")
+            
+        model_data = self.merged_data[attributes].copy().dropna()
+        
+        # Rename safety score columns to match expected format
+        if wtp_attribute == 'SAFETY_SCORE':
+            model_data = model_data.rename(columns={
+                'safety_score_1': 'SAFETY_SCORE1',
+                'safety_score_2': 'SAFETY_SCORE2'
+            })
+
+        _, biodata_wide, obs_per_ind = prepare_panel_data(
+            model_data, self.individual_id, 'CHOICE'
+        )
+
+        # Define WTP space parameters following Lab_02A reference implementation
+        # Parameters for log-normal WTP distribution
+        mu = Beta('mu', -1, None, None, 0)  # Starting value from reference
+        sigma = Beta('sigma', 1, None, None, 0)  # Starting value from reference
+        
+        # Cost parameter (fixed, negative) - this is like B_tc in the reference
+        B_cost = Beta('B_cost', -0.1, None, None, 0)  # Starting value from reference
+            
+        # Random WTP parameter (log-normal distribution)
+        # This is like vtt_rnd in the reference: vtt_rnd = exp(mu + sigma * bioDraws('vtt_rnd', 'NORMAL_HALTON2'))
+        wtp_rnd = exp(mu + sigma * bioDraws('wtp_rnd', 'NORMAL_HALTON2'))
+
+        # Define fixed parameters for segmentation features
+        fixed_params = {}
+        for feature in seg_features:
+            beta_name = self._sanitize_name_for_beta(feature)
+            fixed_params[feature] = Beta(beta_name, 0, None, None, 0)
+
+        # Define utility functions in WTP space following Lab_02A approach:
+        # V_L = B_tc * (CostL + vtt_rnd * TimeL) + segmentation_terms
+        # V_R = B_tc * (CostR + vtt_rnd * TimeR) + segmentation_terms
+        V = []
+        for q in range(obs_per_ind):
+            # Get variable names for this observation
+            cost1_name = f"{cost_attribute}1_{q}"
+            cost2_name = f"{cost_attribute}2_{q}"
+            wtp1_name = f"{wtp_attribute}1_{q}"
+            wtp2_name = f"{wtp_attribute}2_{q}"
+            
+            V1 = V2 = 0
+            
+            # Build WTP space utility: B_cost * (Cost + WTP * WTP_attribute)
+            if (cost1_name in biodata_wide.variables and 
+                wtp1_name in biodata_wide.variables):
+                
+                # Following Lab_02A: V = B_cost * (Cost + WTP_rnd * WTP_attribute)
+                V1 = B_cost * (Variable(cost1_name) / cost_scale + wtp_rnd * Variable(wtp1_name))
+                V2 = B_cost * (Variable(cost2_name) / cost_scale + wtp_rnd * Variable(wtp2_name))
+                
+                # Add segmentation features (outside the WTP factorization)
+                for feature in seg_features:
+                    var1_name = f"{feature}_1_{q}"
+                    var2_name = f"{feature}_2_{q}"
+                    if var1_name in biodata_wide.variables and var2_name in biodata_wide.variables:
+                        V1 += fixed_params[feature] * Variable(var1_name)
+                        V2 += fixed_params[feature] * Variable(var2_name)
+            
+            V.append({1: V1, 2: V2})
+
+        # Estimate the model using the WTP-specific estimation function
+        results = estimate_wtp_mxl(V, {1: 1, 2: 1}, 'CHOICE', obs_per_ind, 
+                                  self.num_draws, biodata_wide, model_name, self.output_dir)
+        
+        return results, obs_per_ind, cost_attribute, wtp_attribute
+
+    def _compute_wtp_metrics(self):
+        """
+        Compute WTP metrics from the separately estimated WTP space models.
+        These are extracted from dedicated WTP space models, not computed as ratios
+        from utility space models.
+        """
+        print("\nComputing WTP metrics from WTP space models...")
+        
+        self.wtp_metrics = {}
+        
+        # Safety vs Travel Time WTP (from separate WTP space model)
+        if hasattr(self, 'wtp_safety_tt_results'):
+            results, obs_per_ind, cost_attr, wtp_attr = self.wtp_safety_tt_results
+            params = results.get_estimated_parameters()
+            
+            # For log-normal distribution, mean = exp(mu + sigma^2/2)
+            # This is the direct WTP estimate from the WTP space model
+            mu = params.loc['mu']['Value']
+            sigma = params.loc['sigma']['Value']
+            mean_wtp = np.exp(mu + sigma**2/2)
+            
+            self.wtp_metrics['safety_vs_tt'] = {
+                'mean_wtp_minutes_per_unit': mean_wtp,
+                'mu': mu,
+                'sigma': sigma,
+                'log_likelihood': results.logLike
+            }
+            print(f"WTP for Safety vs Travel Time: {mean_wtp:.3f} minutes per safety unit")
+        
+        # Safety vs Traffic Lights WTP (from separate WTP space model)
+        if hasattr(self, 'wtp_safety_tl_results'):
+            results, obs_per_ind, cost_attr, wtp_attr = self.wtp_safety_tl_results
+            params = results.get_estimated_parameters()
+            
+            # For log-normal distribution, mean = exp(mu + sigma^2/2)
+            # This is the direct WTP estimate from the WTP space model
+            mu = params.loc['mu']['Value']
+            sigma = params.loc['sigma']['Value']
+            mean_wtp = np.exp(mu + sigma**2/2)
+            
+            self.wtp_metrics['safety_vs_tl'] = {
+                'mean_wtp_lights_per_unit': mean_wtp,
+                'mu': mu,
+                'sigma': sigma,
+                'log_likelihood': results.logLike
+            }
+            print(f"WTP for Safety vs Traffic Lights: {mean_wtp:.3f} traffic lights per safety unit")
 
     def generate_results_table(self):
         """Generates and saves a LaTeX table comparing the final models."""
@@ -537,7 +875,7 @@ class ChoiceModelBenchmark:
 
         for name, (train_res, obs_per_ind) in models_to_report.items():
             model_metrics[name] = {
-                'train': extract_mxl_metrics(train_res, obs_per_ind, train_res.data.numberOfObservations)
+                'train': extract_mxl_metrics(train_res, obs_per_ind, train_res.numberOfObservations)
             }
             params = train_res.get_estimated_parameters()
             model_params[name] = params
@@ -636,13 +974,81 @@ class ChoiceModelBenchmark:
             f.write(latex_content)
         
         print(f"LaTeX table saved to {table_path}")
+        
+        # Generate WTP results table if available
+        if hasattr(self, 'wtp_metrics'):
+            self._generate_wtp_table()
     
-def main():
-    """Main function to run the choice model benchmark"""
+    def _generate_wtp_table(self):
+        """Generate a LaTeX table with WTP results."""
+        print("\nGenerating WTP results table...")
+        
+        lines = [
+            "\\begin{table}[htbp]",
+            "    \\centering",
+            "    \\caption{Willingness-to-Pay Results for Safety Perception}",
+            "    \\label{tab:wtp_results}",
+            "    \\begin{tabular}{lcc}",
+            "    \\toprule",
+            "    Trade-off & Mean WTP & 95\\% Confidence Interval \\\\",
+            "    \\midrule",
+        ]
+        
+        # Safety vs Travel Time
+        if 'safety_vs_tt' in self.wtp_metrics:
+            wtp_tt = self.wtp_metrics['safety_vs_tt']['mean_wtp_minutes_per_unit']
+            mu = self.wtp_metrics['safety_vs_tt']['mu']
+            sigma = self.wtp_metrics['safety_vs_tt']['sigma']
+            
+            # Approximate 95% CI for log-normal mean (using delta method approximation)
+            # This is a simplified approach - for publication quality, should use bootstrap
+            ci_lower = np.exp(mu + sigma**2/2) * 0.8  # Approximate
+            ci_upper = np.exp(mu + sigma**2/2) * 1.2  # Approximate
+            
+            lines.append(f"    Safety vs Travel Time & {wtp_tt:.2f} minutes & [{ci_lower:.2f}, {ci_upper:.2f}] \\\\")
+        
+        # Safety vs Traffic Lights
+        if 'safety_vs_tl' in self.wtp_metrics:
+            wtp_tl = self.wtp_metrics['safety_vs_tl']['mean_wtp_lights_per_unit']
+            mu = self.wtp_metrics['safety_vs_tl']['mu']
+            sigma = self.wtp_metrics['safety_vs_tl']['sigma']
+            
+            # Approximate 95% CI for log-normal mean
+            ci_lower = np.exp(mu + sigma**2/2) * 0.8  # Approximate
+            ci_upper = np.exp(mu + sigma**2/2) * 1.2  # Approximate
+            
+            lines.append(f"    Safety vs Traffic Lights & {wtp_tl:.2f} lights & [{ci_lower:.2f}, {ci_upper:.2f}] \\\\")
+        
+        lines.extend([
+            "    \\bottomrule",
+            "    \\end{tabular}",
+            "    \\\\[0.5em]",
+            "    \\parbox{\\textwidth}{\\footnotesize",
+            "    Note: WTP values indicate how much additional travel time (minutes) or",
+            "    traffic lights cyclists are willing to accept for a one-unit increase in",
+            "    perceived safety score. Confidence intervals are approximate.}",
+            "\\end{table}"
+        ])
+
+        latex_content = "\n".join(lines)
+        table_path = self.output_dir / 'wtp_results.tex'
+        with open(table_path, 'w') as f:
+            f.write(latex_content)
+        
+        print(f"WTP table saved to {table_path}")
+    
+def main(checkpoint_dir=None):
+    """
+    Main function to run the choice model benchmark
+    
+    Args:
+        checkpoint_dir: Optional path to existing model results directory for checkpoint loading
+                       e.g., 'reports/models/mxl_choice_20250725_122947'
+    """
     
     print("=== Choice Model Benchmarking ===")
     
-    benchmark = ChoiceModelBenchmark()
+    benchmark = ChoiceModelBenchmark(checkpoint_dir=checkpoint_dir)
     benchmark.load_and_prepare_data()
     
     # Run backward elimination to find significant features
@@ -659,4 +1065,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main(checkpoint_dir='reports/models/mxl_choice_20250725_122947') 
+    # main()

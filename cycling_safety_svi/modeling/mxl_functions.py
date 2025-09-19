@@ -141,7 +141,7 @@ def prepare_panel_data(dataframe, individual_id='RID', choice_var='CHOICE', feat
     # Create Biogeme database object for wide format
     biodata_wide = db.Database('panel_data_wide', df_wide)
     
-    print(f'Wide dataset shape: {biodata_wide.data.shape}')
+    print(f'Wide dataset shape: {df_wide.shape}')
     
     return biodata, biodata_wide, obs_per_ind
 
@@ -281,8 +281,8 @@ def extract_mxl_metrics(results, obs_per_ind, n_individuals):
         Dictionary with model metrics
     """
     # Calculate basic metrics
-    log_like = results.data.logLike
-    n_params = len(results.data.betaValues)
+    log_like = results.logLike
+    n_params = len(results.betaValues)
     n_obs = n_individuals * obs_per_ind
     
     # Calculate AIC and BIC
@@ -290,7 +290,7 @@ def extract_mxl_metrics(results, obs_per_ind, n_individuals):
     bic = np.log(n_individuals) * n_params - 2 * log_like  # Use n_individuals for panel data
     
     # Get pseudo R-squared
-    pseudo_r2 = results.data.rhoSquare
+    pseudo_r2 = results.rhoSquare
     
     return {
         'log_likelihood': log_like,
@@ -304,6 +304,81 @@ def extract_mxl_metrics(results, obs_per_ind, n_individuals):
     }
 
 
+def estimate_wtp_mxl(V, AV, CHOICE, obs_per_ind, num_draws, biodata_wide, model_name, output_dir=None):
+    """
+    Estimate a mixed logit model in WTP space with panel data
+    
+    Args:
+        V: List of dictionaries containing utility functions for each observation
+        AV: Dictionary containing availability conditions  
+        CHOICE: String name of choice variable
+        obs_per_ind: Number of observations per individual
+        num_draws: Number of Monte Carlo draws
+        biodata_wide: Biogeme database in wide format
+        model_name: Name of the model
+        output_dir: Output directory for results (optional)
+    
+    Returns:
+        Biogeme estimation results
+    """
+    # The conditional probability of the chosen alternative is a logit
+    condProb = [models.loglogit(V[q], AV, Variable(f'{CHOICE}_{q}')) for q in range(obs_per_ind)] 
+
+    # Take the product of the conditional probabilities
+    condprobIndiv = exp(bioMultSum(condProb))   # exp to convert from logP to P again
+
+    # The unconditional probability is obtained by simulation
+    uncondProb = MonteCarlo(condprobIndiv)
+
+    # The Log-likelihood is the log of the unconditional probability
+    LL = log(uncondProb)
+
+    # Create the Biogeme estimation object containing the data and the model
+    biogeme = bio.BIOGEME(biodata_wide, LL, number_of_draws=num_draws)
+
+    # Compute the null loglikelihood for reporting
+    # Note that we need to compute it manually, as biogeme does not do this for panel data
+    biogeme.nullLogLike = biodata_wide.get_sample_size() * obs_per_ind * np.log(1 / len(V[0]))
+
+    # Set model name
+    biogeme.modelName = model_name    
+    
+    # Configure output settings
+    biogeme.generate_pickle = True
+    biogeme.generate_html = True
+    biogeme.save_iterations = False
+    
+    # Change to output directory if specified
+    original_cwd = None
+    if output_dir:
+        original_cwd = os.getcwd()
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        os.chdir(output_dir)
+
+    try:
+        # Estimate the parameters
+        results = biogeme.estimate()
+        
+        # Save additional outputs if in output directory
+        if output_dir:
+            try:
+                results.write_latex()
+                results.write_pickle() 
+                results.write_html()
+            except AttributeError:
+                results.writeLaTeX()
+                results.writePickle()
+                results.writeHTML()
+                
+    finally:
+        # Always return to original directory
+        if original_cwd:
+            os.chdir(original_cwd)
+    
+    return results
+
+
 def print_mxl_results(results):
     """Print formatted results for MXL model"""
     print("\n" + "="*60)
@@ -311,10 +386,10 @@ def print_mxl_results(results):
     print("="*60)
     
     # Model fit statistics
-    print(f"Log-likelihood: {results.data.logLike:.6f}")
-    print(f"Rho-square: {results.data.rhoSquare:.6f}")
-    print(f"Number of estimated parameters: {len(results.data.betaValues)}")
-    print(f"Number of observations: {results.data.numberOfObservations}")
+    print(f"Log-likelihood: {results.logLike:.6f}")
+    print(f"Rho-square: {results.rhoSquare:.6f}")
+    print(f"Number of estimated parameters: {len(results.betaValues)}")
+    print(f"Number of observations: {results.numberOfObservations}")
     
     # Parameter estimates
     print("\nParameter Estimates:")
@@ -326,5 +401,5 @@ def print_mxl_results(results):
     except:
         # Fallback if get_estimated_parameters() is not available
         print("Beta values:")
-        for param, value in results.data.betaValues.items():
-            print(f"  {param}: {value:.6f}") 
+        for param, value in zip(results.betaNames, results.betaValues):
+            print(f"  {param}: {value:.6f}")
