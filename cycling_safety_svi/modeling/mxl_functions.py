@@ -304,6 +304,138 @@ def extract_mxl_metrics(results, obs_per_ind, n_individuals):
     }
 
 
+def estimate_mnl(V, AV, CHOICE, biodata, model_name, output_dir=None):
+    """
+    Estimate a multinomial logit model (without panel structure)
+    
+    Args:
+        V: Dictionary containing utility functions {alt: utility}
+        AV: Dictionary containing availability conditions  
+        CHOICE: String name of choice variable
+        biodata: Biogeme database
+        model_name: Name of the model
+        output_dir: Output directory for results (optional)
+    
+    Returns:
+        Biogeme estimation results
+    """
+    # Calculate the probability using logit model
+    prob = models.logit(V, AV, Variable(CHOICE))
+    
+    # Log-likelihood function
+    LL = log(prob)
+    
+    # Create the Biogeme estimation object
+    biogeme = bio.BIOGEME(biodata, LL)
+    
+    # Compute the null loglikelihood for reporting
+    biogeme.nullLogLike = biodata.get_sample_size() * np.log(1 / len(V))
+    
+    # Set model name
+    biogeme.modelName = model_name    
+    
+    # Configure output settings
+    biogeme.generate_pickle = True
+    biogeme.generate_html = True
+    biogeme.save_iterations = False
+    
+    # Change to output directory if specified
+    original_cwd = None
+    if output_dir:
+        original_cwd = os.getcwd()
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        os.chdir(output_dir)
+
+    try:
+        # Estimate the parameters
+        results = biogeme.estimate()
+        
+        # Save additional outputs if in output directory
+        if output_dir:
+            try:
+                results.write_latex()
+                results.write_pickle() 
+                results.write_html()
+            except AttributeError:
+                results.writeLaTeX()
+                results.writePickle()
+                results.writeHTML()
+                
+    finally:
+        # Always return to original directory
+        if original_cwd:
+            os.chdir(original_cwd)
+    
+    return results
+
+
+def estimate_wtp_mnl(V, AV, CHOICE, biodata, model_name, output_dir=None):
+    """
+    Estimate a multinomial logit model in WTP space (without panel structure)
+    
+    Args:
+        V: Dictionary containing utility functions {alt: utility}
+        AV: Dictionary containing availability conditions  
+        CHOICE: String name of choice variable
+        biodata: Biogeme database
+        model_name: Name of the model
+        output_dir: Output directory for results (optional)
+    
+    Returns:
+        Biogeme estimation results
+    """
+    # Calculate the probability using logit model
+    prob = models.logit(V, AV, Variable(CHOICE))
+    
+    # Log-likelihood function
+    LL = log(prob)
+    
+    # Create the Biogeme estimation object
+    biogeme = bio.BIOGEME(biodata, LL)
+    
+    # Compute the null loglikelihood for reporting
+    biogeme.nullLogLike = biodata.get_sample_size() * np.log(1 / len(V))
+    
+    # Set model name
+    biogeme.modelName = model_name    
+    
+    # Configure output settings
+    biogeme.generate_pickle = True
+    biogeme.generate_html = True
+    biogeme.save_iterations = False
+    
+    # Change to output directory if specified
+    original_cwd = None
+    if output_dir:
+        original_cwd = os.getcwd()
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        os.chdir(output_dir)
+
+    try:
+        # Estimate the parameters
+        results = biogeme.estimate()
+        
+        # Save additional outputs if in output directory
+        if output_dir:
+            try:
+                results.write_latex()
+                results.write_pickle() 
+                results.write_html()
+            except AttributeError:
+                results.writeLaTeX()
+                results.writePickle()
+                results.writeHTML()
+                
+    finally:
+        # Always return to original directory
+        if original_cwd:
+            os.chdir(original_cwd)
+    
+    return results
+
+
 def estimate_wtp_mxl(V, AV, CHOICE, obs_per_ind, num_draws, biodata_wide, model_name, output_dir=None):
     """
     Estimate a mixed logit model in WTP space with panel data
