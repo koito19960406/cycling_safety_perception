@@ -1,13 +1,18 @@
 """
-Safety-Demographics Interaction Model (Mixed Logit Version)
+Safety-Demographics Interaction Model (Mixed Logit Version - Method 1)
 
 This script extends a trained choice model with safety * demographics interaction effects.
-It uses a mixed logit (MXL) formulation, where TT, TL, and SAFETY_SCORE are random parameters.
-The script takes a trained model as input to ensure the same segmentation features are used.
-It adds trippurpose and traveltime as demographic variables.
+It uses a mixed logit (MXL) formulation with the Method 1 approach where both base and 
+interaction effects are random parameters sharing a common sigma (heterogeneity structure).
+
+Key difference from original:
+- Base safety coefficient is random per demographic group
+- Interaction effects are implemented as separate random parameters
+- All groups share common sigma (can be relaxed if needed)
+- This captures demographic-specific heterogeneity in both mean AND variance
 
 Usage:
-    python safety_demographics_interaction_model.py --model_path /path/to/final_model.pickle
+    python safety_demographics_interaction_model_method1.py --model_path /path/to/final_model.pickle
 """
 
 import os
@@ -32,7 +37,7 @@ from mxl_functions import (
 
 
 class SafetyDemographicsInteractionModel:
-    """Extends a trained choice model with safety * demographics interaction effects using MXL."""
+    """Extends a trained choice model with safety * demographics interaction effects using MXL Method 1."""
     
     def __init__(self, model_path, model_group, demographic_variables, output_dir):
         """Initialize the demographics interaction model"""
@@ -43,7 +48,7 @@ class SafetyDemographicsInteractionModel:
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
         
-        print(f"Safety-Demographics Interaction Model (MXL) - Group: {self.model_group}")
+        print(f"Safety-Demographics Interaction Model (MXL Method 1) - Group: {self.model_group}")
         print(f"Base model path: {self.model_path}")
         print(f"Output directory: {self.output_dir}")
         
@@ -185,6 +190,9 @@ class SafetyDemographicsInteractionModel:
 
         self._merge_all_datasets()
         self._process_demographics()
+        # save self.merged_data in a csv file
+        merged_path = self.output_dir.parent / f'merged_data_{self.model_group}.csv'
+        self.merged_data.to_csv(merged_path, index=False)
         print(f"Final dataset prepared with {len(self.merged_data)} observations.")
         
     def _load_enhanced_demographics(self, database_path):
@@ -216,15 +224,6 @@ class SafetyDemographicsInteractionModel:
         # Handle specific data cleaning tasks
         if 'traveltime' in self.demographics.columns:
             self.demographics['traveltime'] = self.demographics['traveltime'].replace(6, 5)
-
-        # The user requested to use the provided labels, so we comment out dynamic mapping generation
-        # for col in self.demographics.columns:
-        #     if col in self.demographic_mappings and col not in ['age', 'gender']:
-        #         counts = self.demographics[col].value_counts().sort_index()
-        #         print(f"\n{col} distribution:\n{counts}")
-        #         unique_vals = sorted([x for x in self.demographics[col].unique() if pd.notna(x)])
-        #         self.demographic_mappings[col] = {val: f'{col}_{int(val)}' for val in unique_vals}
-        #         print(f"Created mapping for {col}: {self.demographic_mappings[col]}")
 
         # drop any rows with NaN in demographics
         self.demographics.dropna(subset=demographic_cols, inplace=True)
@@ -269,108 +268,201 @@ class SafetyDemographicsInteractionModel:
         demographic_cat_cols = [f'{col}_cat' for col in self.demographic_mappings.keys() if f'{col}_cat' in self.merged_data.columns]
         self.merged_data.dropna(subset=demographic_cat_cols, inplace=True)
 
-    def create_demographic_dummy_variables(self, data):
-        """Create dummy variables for demographic categories and safety interactions."""
-        print(f"Creating dummy variables and interaction terms for group: {self.model_group}...")
+    def identify_demographic_categories(self, data):
+        """
+        Identify all demographic categories present in the data for the current demographic variable.
+        Returns reference category and list of non-reference categories.
+        """
+        demographic_categories = {}
         
-        interaction_features = []
-        
-        def create_dummies(feature, ref_cat):
-            cat_col = f'{feature}_cat'
-            if cat_col not in data.columns: return []
-            
-            cats = [c for c in data[cat_col].unique() if pd.notna(c) and c != ref_cat]
-            for cat in cats:
-                # Labels from demographic_mappings are already sanitized
-                dummy_name = cat
-                
-                data[f'{dummy_name}_1'] = (data[cat_col] == cat).astype(int)
-                data[f'{dummy_name}_2'] = data[f'{dummy_name}_1']
-                
-                interact_name = f"safety_{dummy_name}"
-                data[f'{interact_name}_1'] = data['SAFETY_SCORE1'] * data[f'{dummy_name}_1']
-                data[f'{interact_name}_2'] = data['SAFETY_SCORE2'] * data[f'{dummy_name}_2']
-                interaction_features.append(interact_name)
-            return cats
-
         for demo in self.demographic_variables:
-            # The logic to determine the reference category is now centralized here.
-            # It finds the lowest numeric key present in the actual data for that demographic.
-            if f'{demo}_cat' in data.columns and data[f'{demo}_cat'].notna().any():
+            cat_col = f'{demo}_cat'
+            if cat_col not in data.columns:
+                continue
                 
-                # Get the numeric keys corresponding to the categories present in the data
-                reverse_mapping = {v: k for k, v in self.demographic_mappings[demo].items()}
-                present_cats = data[f'{demo}_cat'].dropna().unique()
-                data_keys = [reverse_mapping[cat] for cat in present_cats if cat in reverse_mapping]
+            # Get the numeric keys corresponding to the categories present in the data
+            reverse_mapping = {v: k for k, v in self.demographic_mappings[demo].items()}
+            present_cats = data[cat_col].dropna().unique()
+            data_keys = [reverse_mapping[cat] for cat in present_cats if cat in reverse_mapping]
+            
+            if data_keys:
+                ref_key = min(data_keys)
+                ref_cat = self.demographic_mappings[demo][ref_key]
                 
-                if data_keys:
-                    ref_key = min(data_keys)
-                    ref_cat = self.demographic_mappings[demo][ref_key]
-                    create_dummies(demo, ref_cat)
-                else:
-                    print(f"Warning: Could not find a valid reference category for '{demo}'. Skipping dummy creation.")
-
-        return data, interaction_features
+                # Get all non-reference categories
+                non_ref_cats = [cat for cat in present_cats if cat != ref_cat]
+                
+                demographic_categories[demo] = {
+                    'reference': ref_cat,
+                    'categories': non_ref_cats,
+                    'all_categories': present_cats
+                }
+                
+                print(f"\n{demo}: Reference = {ref_cat}, Other categories = {non_ref_cats}")
+        
+        return demographic_categories
 
     def estimate_interaction_model(self):
-        """Estimate the MXL safety * demographics interaction model."""
-        print("\nEstimating Safety * Demographics Interaction Model (MXL)...")
+        """
+        Estimate the MXL safety * demographics interaction model using Method 1.
+        
+        Method 1 Approach:
+        - Base safety parameter is random for reference group: B_SAFETY_ref_rnd
+        - Each demographic group gets its own random parameter: B_SAFETY_group_rnd
+        - All groups share a common sigma: sigma_SAFETY_common
+        - Utility: V = ... + B_SAFETY_group_rnd * SAFETY_SCORE
+        """
+        print("\nEstimating Safety * Demographics Interaction Model (MXL Method 1)...")
+        print("Method 1: Both base and interaction effects are random parameters with shared sigma")
         
         model_data = self.merged_data.copy()
         
-        model_data, interaction_features = self.create_demographic_dummy_variables(model_data)
-
-        features = self.original_model_features + interaction_features + ['SAFETY_SCORE']
+        # Identify demographic categories
+        demographic_info = self.identify_demographic_categories(model_data)
         
-        # Prepare panel data
-        _, biodata_wide, obs_per_ind = prepare_panel_data(model_data, self.individual_id, 'CHOICE', features)
+        # Prepare panel data (no dummy creation needed for Method 1)
+        features = self.original_model_features + ['SAFETY_SCORE']
         
-        # Define parameters and utility
-        random_params_config = {
-            'TT': {'mean_init': -1, 'sigma_init': 0.1, 'dist': 'lognormal'}, 
-            'TL': {'mean_init': -1, 'sigma_init': 0.1, 'dist': 'lognormal'},
-            'SAFETY_SCORE': {'mean_init': 1.0, 'sigma_init': 0.1, 'dist': 'normal'}
-        }
-        random_params = {}
-        for p, c in random_params_config.items():
-            mean = Beta(f'B_{p}', c['mean_init'], None,None,0)
-            sigma = Beta(f'sigma_{p}', c['sigma_init'], None,None,0)
-            draws = bioDraws(f'{p}_rnd', 'NORMAL_HALTON2')
-            if c.get('dist') == 'lognormal':
-                random_params[p] = -exp(mean + sigma * draws)
-            else:
-                random_params[p] = mean + sigma * draws
-
-        fixed_features = self.original_model_features + interaction_features
-        fixed_params = {f: Beta(f"B_{f.replace(' - ', '___').replace(' ', '_')}", 0, None,None,0) for f in fixed_features}
-
-        # Create utility function
+        # Add demographic column to features so it's available in biogeme data
+        for demo in self.demographic_variables:
+            if demo in model_data.columns:
+                features.append(demo)
+        
+        _, biodata_wide, obs_per_ind = prepare_panel_data(
+            model_data, 
+            self.individual_id, 
+            'CHOICE', 
+            features
+        )
+        
+        # ============================================================
+        # METHOD 1: RANDOM PARAMETERS FOR EACH DEMOGRAPHIC GROUP
+        # ============================================================
+        
+        # 1. Define standard random parameters (TT, TL)
+        B_TT = Beta('B_TT', -1, None, None, 0)
+        B_TL = Beta('B_TL', -1, None, None, 0)
+        sigma_TT = Beta('sigma_TT', 0.1, None, None, 0)
+        sigma_TL = Beta('sigma_TL', 0.1, None, None, 0)
+        
+        B_TT_rnd = -exp(B_TT + sigma_TT * bioDraws('B_TT_rnd', 'NORMAL_HALTON2'))
+        B_TL_rnd = -exp(B_TL + sigma_TL * bioDraws('B_TL_rnd', 'NORMAL_HALTON2'))
+        
+        # 2. Define COMMON sigma for all safety parameters
+        sigma_SAFETY_common = Beta('sigma_SAFETY_common', 0.1, None, None, 0)
+        
+        # 3. Define random safety parameters for each demographic group
+        safety_random_params = {}
+        
+        for demo in self.demographic_variables:
+            if demo not in demographic_info:
+                continue
+                
+            ref_cat = demographic_info[demo]['reference']
+            categories = demographic_info[demo]['categories']
+            
+            # Create base parameter for reference group
+            ref_param_name = f'B_SAFETY_{ref_cat}'
+            B_ref = Beta(ref_param_name, 1.0, None, None, 0)
+            draw_ref = bioDraws(f'{ref_param_name}_rnd', 'NORMAL_HALTON2')
+            B_ref_rnd = exp(B_ref + sigma_SAFETY_common * draw_ref)
+            safety_random_params[ref_cat] = B_ref_rnd
+            
+            # Create parameters for each non-reference category
+            for cat in categories:
+                cat_param_name = f'B_SAFETY_{cat}'
+                B_cat = Beta(cat_param_name, 1.0, None, None, 0)
+                # CRITICAL: Use same draw name as reference to share random component
+                draw_cat = bioDraws(f'{cat_param_name}_rnd', 'NORMAL_HALTON2')
+                B_cat_rnd = exp(B_cat + sigma_SAFETY_common * draw_cat)
+                safety_random_params[cat] = B_cat_rnd
+        
+        # 4. Define fixed parameters for segmentation features
+        fixed_params = {}
+        for f in self.original_model_features:
+            param_name = f"B_{f.replace(' - ', '___').replace(' ', '_')}"
+            fixed_params[f] = Beta(param_name, 0, None, None, 0)
+        
+        # 5. Get the demographic variable name for the current model group
+        demo_var = self.demographic_variables[0]  # We only have one variable per model group
+        demo_col = Variable(demo_var)
+        
+        # 6. Create utility function
         V = []
         for q in range(obs_per_ind):
             V1, V2 = 0, 0
-            # Random parameters
-            for name, param in random_params.items():
-                scale = 10 if name == 'TT' else (3 if name == 'TL' else 1)
-                v1_name, v2_name = f"{name}1_{q}", f"{name}2_{q}"
-                if v1_name in biodata_wide.variables:
-                    V1 += param * Variable(v1_name) / scale
-                    V2 += param * Variable(v2_name) / scale
-            # Fixed parameters
-            for name, param in fixed_params.items():
-                v1_name, v2_name = f"{name}_1_{q}", f"{name}_2_{q}"
+            
+            # Add TT and TL random parameters
+            v1_tt, v2_tt = f"TT1_{q}", f"TT2_{q}"
+            v1_tl, v2_tl = f"TL1_{q}", f"TL2_{q}"
+            
+            if v1_tt in biodata_wide.variables:
+                V1 += B_TT_rnd * Variable(v1_tt) / 10
+                V2 += B_TT_rnd * Variable(v2_tt) / 10
+            
+            if v1_tl in biodata_wide.variables:
+                V1 += B_TL_rnd * Variable(v1_tl) / 3
+                V2 += B_TL_rnd * Variable(v2_tl) / 3
+            
+            # Add fixed segmentation parameters
+            for feature, param in fixed_params.items():
+                feature_col = feature.replace(' ', '_').replace('___', ' - ')
+                v1_name = f"{feature_col}_1_{q}"
+                v2_name = f"{feature_col}_2_{q}"
+                
                 if v1_name in biodata_wide.variables:
                     V1 += param * Variable(v1_name)
                     V2 += param * Variable(v2_name)
-                else:
-                    print(f"Warning: Variable {v1_name} not found in biodata_wide, skipping.")
+            
+            # Add safety random parameters based on demographic category
+            # This is the key difference: we select the appropriate random parameter
+            # based on the individual's demographic category
+            v1_safety = f"SAFETY_SCORE1_{q}"
+            v2_safety = f"SAFETY_SCORE2_{q}"
+            
+            if v1_safety in biodata_wide.variables:
+                # Build conditional expression for demographic-specific safety parameter
+                # Format: (demo == cat_code) selects the appropriate random parameter
+                safety_expr_v1 = 0
+                safety_expr_v2 = 0
+                
+                for cat, random_param in safety_random_params.items():
+                    # Find the numeric code for this category
+                    cat_code = None
+                    for code, label in self.demographic_mappings[demo_var].items():
+                        if label == cat:
+                            cat_code = code
+                            break
+                    
+                    if cat_code is not None:
+                        # Add conditional contribution: if individual is in this category, use this random param
+                        safety_expr_v1 += (demo_col == cat_code) * random_param * Variable(v1_safety)
+                        safety_expr_v2 += (demo_col == cat_code) * random_param * Variable(v2_safety)
+                
+                V1 += safety_expr_v1
+                V2 += safety_expr_v2
+            
             V.append({1: V1, 2: V2})
-
-        # Estimate model
-        model_name = f'demographics_interaction_{self.model_group}'
-        results = estimate_mxl(V, {1:1, 2:1}, 'CHOICE', obs_per_ind, self.num_draws, biodata_wide, model_name, self.output_dir)
+        
+        # 7. Estimate model
+        model_name = f'demographics_interaction_method1_{self.model_group}'
+        AV = {1: 1, 2: 1}
+        
+        results = estimate_mxl(
+            V, 
+            AV, 
+            'CHOICE', 
+            obs_per_ind, 
+            self.num_draws, 
+            biodata_wide, 
+            model_name, 
+            self.output_dir
+        )
         
         self.results = (results, obs_per_ind)
-        print_mxl_results(results)
+        print_mxl_results(results.data)
+        
+        return results
 
     def generate_results_table(self):
         """Generates and saves a LaTeX table for the interaction model."""
@@ -388,8 +480,8 @@ class SafetyDemographicsInteractionModel:
         def format_p(p):
             return '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
 
-        table_title = f"Safety-Demographics Interaction Model (MXL) - {self.model_group.replace('_', ' ').title()}"
-        table_label = f"tab:demographics_interaction_{self.model_group}"
+        table_title = f"Safety-Demographics Interaction Model (MXL Method 1) - {self.model_group.replace('_', ' ').title()}"
+        table_label = f"tab:demographics_interaction_method1_{self.model_group}"
         
         lines = [
             "\\begin{table}[htbp]", "\\centering", f"\\caption{{{table_title}}}",
@@ -419,8 +511,9 @@ class SafetyDemographicsInteractionModel:
         ])
 
         latex_content = "\n".join(lines)
-        table_path = self.output_dir / f'demographics_interaction_model_{self.model_group}.tex'
-        with open(table_path, 'w') as f: f.write(latex_content)
+        table_path = self.output_dir / f'demographics_interaction_model_method1_{self.model_group}.tex'
+        with open(table_path, 'w') as f: 
+            f.write(latex_content)
         print(f"LaTeX table saved to {table_path}")
     
     def run_analysis(self):
@@ -431,13 +524,15 @@ class SafetyDemographicsInteractionModel:
         self.generate_results_table()
         print(f"\n✓ Analysis complete. Results saved to: {self.output_dir}")
 
+
 def main():
-    parser = argparse.ArgumentParser(description='Run Safety-Demographics Interaction Model (MXL)')
+    parser = argparse.ArgumentParser(description='Run Safety-Demographics Interaction Model (MXL Method 1)')
     parser.add_argument('--model_path', type=str, 
                         default='reports/models/mxl_choice_20250725_122947/final_full_model.pickle',
                         help='Path to the trained base model pickle file')
     args = parser.parse_args()
 
+    # Define model groups - one demographic variable per group
     model_groups = {
         "demographic_age": ["age"],
         "demographic_gender": ["gender"],
@@ -457,11 +552,14 @@ def main():
         "trip_traveltime": ["traveltime"],
         "trip_commutingdays": ["commutingdays"]
     }
+    
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    base_output_dir = Path('reports/models/interaction') / f"safety_demographics_{timestamp}"
+    base_output_dir = Path('reports/models/interaction') / f"safety_demographics_method1_{timestamp}"
 
     for group_name, variables in model_groups.items():
-        print(f"\n----- Running analysis for group: {group_name} -----")
+        print(f"\n{'='*80}")
+        print(f"Running analysis for group: {group_name}")
+        print(f"{'='*80}")
         
         group_output_dir = base_output_dir / group_name
 
@@ -471,7 +569,20 @@ def main():
             demographic_variables=variables,
             output_dir=group_output_dir
         )
-        interaction_model.run_analysis()
+        
+        try:
+            interaction_model.run_analysis()
+        except Exception as e:
+            print(f"ERROR in {group_name}: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            continue
+
+    print(f"\n{'='*80}")
+    print(f"All analyses complete!")
+    print(f"Results saved to: {base_output_dir}")
+    print(f"{'='*80}")
+
 
 if __name__ == "__main__":
-    main() 
+    main()
