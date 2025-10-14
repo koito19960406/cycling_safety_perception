@@ -454,11 +454,6 @@ class SafetyDemographicsInteractionModel:
         model_name = f'demographics_interaction_{self.model_group}'
         AV = {1: 1, 2: 1}
         
-        print(f"\n[DEBUG] Starting model estimation for {model_name}...", flush=True)
-        print(f"[DEBUG] Number of draws: {self.num_draws}", flush=True)
-        print(f"[DEBUG] Observations per individual: {obs_per_ind}", flush=True)
-        print(f"[DEBUG] Total observations: {biodata_wide.getNumberOfObservations()}", flush=True)
-        
         results = estimate_mxl(
             V, 
             AV, 
@@ -469,8 +464,6 @@ class SafetyDemographicsInteractionModel:
             model_name, 
             self.output_dir
         )
-        
-        print(f"[DEBUG] Model estimation completed successfully!", flush=True)
         
         self.results = (results, obs_per_ind)
         print_mxl_results(results.data)
