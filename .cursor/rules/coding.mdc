@@ -1,0 +1,8 @@
+---
+alwaysApply: true
+---
+
+- prioritize simplicity of the code
+- Share your plan and get my approval before you start coding
+- don't produce readme files (markdown files) to explain what the code does
+- don't use try and except blocks unless absolutely necessary

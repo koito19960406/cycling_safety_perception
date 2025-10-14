@@ -362,7 +362,7 @@ class SafetyDemographicsInteractionModel:
             categories = demographic_info[demo]['categories']
             
             # Create base parameter for reference group
-            ref_param_name = f'B_SAFETY_{ref_cat}'
+            ref_param_name = f'B_SAFETY_{ref_cat}_base'
             B_ref = Beta(ref_param_name, 1.0, None, None, 0)
             draw_ref = bioDraws(f'{ref_param_name}_rnd', 'NORMAL_HALTON2')
             B_ref_rnd = exp(B_ref + sigma_SAFETY_common * draw_ref)
@@ -422,11 +422,17 @@ class SafetyDemographicsInteractionModel:
             
             if v1_safety in biodata_wide.variables:
                 # Build conditional expression for demographic-specific safety parameter
-                # Format: (demo == cat_code) selects the appropriate random parameter
-                safety_expr_v1 = 0
-                safety_expr_v2 = 0
+                # Structure: (B_base + (demo==cat2)*B_cat2 + (demo==cat3)*B_cat3 + ...) * SAFETY_SCORE
                 
-                for cat, random_param in safety_random_params.items():
+                # Get reference category
+                ref_cat = demographic_info[demo_var]['reference']
+                non_ref_cats = demographic_info[demo_var]['categories']
+                
+                # Start with reference category as base (no conditional)
+                safety_param_expr = safety_random_params[ref_cat]
+                
+                # Add conditional terms for non-reference categories
+                for cat in non_ref_cats:
                     # Find the numeric code for this category
                     cat_code = None
                     for code, label in self.demographic_mappings[demo_var].items():
@@ -435,18 +441,23 @@ class SafetyDemographicsInteractionModel:
                             break
                     
                     if cat_code is not None:
-                        # Add conditional contribution: if individual is in this category, use this random param
-                        safety_expr_v1 += (demo_col == cat_code) * random_param * Variable(v1_safety)
-                        safety_expr_v2 += (demo_col == cat_code) * random_param * Variable(v2_safety)
+                        # Add conditional interaction: (demo == cat_code) * B_SAFETY_cat_rnd
+                        safety_param_expr += (demo_col == cat_code) * safety_random_params[cat]
                 
-                V1 += safety_expr_v1
-                V2 += safety_expr_v2
+                # Multiply the entire parameter expression by safety scores once
+                V1 += safety_param_expr * Variable(v1_safety)
+                V2 += safety_param_expr * Variable(v2_safety)
             
             V.append({1: V1, 2: V2})
         
         # 7. Estimate model
-        model_name = f'demographics_interaction_method1_{self.model_group}'
+        model_name = f'demographics_interaction_{self.model_group}'
         AV = {1: 1, 2: 1}
+        
+        print(f"\n[DEBUG] Starting model estimation for {model_name}...", flush=True)
+        print(f"[DEBUG] Number of draws: {self.num_draws}", flush=True)
+        print(f"[DEBUG] Observations per individual: {obs_per_ind}", flush=True)
+        print(f"[DEBUG] Total observations: {biodata_wide.getNumberOfObservations()}", flush=True)
         
         results = estimate_mxl(
             V, 
@@ -458,6 +469,8 @@ class SafetyDemographicsInteractionModel:
             model_name, 
             self.output_dir
         )
+        
+        print(f"[DEBUG] Model estimation completed successfully!", flush=True)
         
         self.results = (results, obs_per_ind)
         print_mxl_results(results.data)
@@ -481,7 +494,7 @@ class SafetyDemographicsInteractionModel:
             return '***' if p < 0.001 else '**' if p < 0.01 else '*' if p < 0.05 else ''
 
         table_title = f"Safety-Demographics Interaction Model (MXL Method 1) - {self.model_group.replace('_', ' ').title()}"
-        table_label = f"tab:demographics_interaction_method1_{self.model_group}"
+        table_label = f"tab:demographics_interaction_{self.model_group}"
         
         lines = [
             "\\begin{table}[htbp]", "\\centering", f"\\caption{{{table_title}}}",
@@ -511,7 +524,7 @@ class SafetyDemographicsInteractionModel:
         ])
 
         latex_content = "\n".join(lines)
-        table_path = self.output_dir / f'demographics_interaction_model_method1_{self.model_group}.tex'
+        table_path = self.output_dir / f'demographics_interaction_model_{self.model_group}.tex'
         with open(table_path, 'w') as f: 
             f.write(latex_content)
         print(f"LaTeX table saved to {table_path}")
@@ -554,7 +567,7 @@ def main():
     }
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    base_output_dir = Path('reports/models/interaction') / f"safety_demographics_method1_{timestamp}"
+    base_output_dir = Path('reports/models/interaction') / f"safety_demographics_{timestamp}"
 
     for group_name, variables in model_groups.items():
         print(f"\n{'='*80}")
