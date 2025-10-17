@@ -310,6 +310,7 @@ class SafetyDemographicsInteractionModel:
         - Base safety parameter is random for reference group: B_SAFETY_ref_rnd
         - Each demographic group gets its own random parameter: B_SAFETY_group_rnd
         - All groups share a common sigma: sigma_SAFETY_common
+        - Distribution: Normal (consistent with base model)
         - Utility: V = ... + B_SAFETY_group_rnd * SAFETY_SCORE
         """
         print("\nEstimating Safety * Demographics Interaction Model (MXL Method 1)...")
@@ -365,7 +366,7 @@ class SafetyDemographicsInteractionModel:
             ref_param_name = f'B_SAFETY_{ref_cat}_base'
             B_ref = Beta(ref_param_name, 1.0, None, None, 0)
             draw_ref = bioDraws(f'{ref_param_name}_rnd', 'NORMAL_HALTON2')
-            B_ref_rnd = exp(B_ref + sigma_SAFETY_common * draw_ref)
+            B_ref_rnd = B_ref + sigma_SAFETY_common * draw_ref
             safety_random_params[ref_cat] = B_ref_rnd
             
             # Create parameters for each non-reference category
@@ -374,7 +375,7 @@ class SafetyDemographicsInteractionModel:
                 B_cat = Beta(cat_param_name, 1.0, None, None, 0)
                 # CRITICAL: Use same draw name as reference to share random component
                 draw_cat = bioDraws(f'{cat_param_name}_rnd', 'NORMAL_HALTON2')
-                B_cat_rnd = exp(B_cat + sigma_SAFETY_common * draw_cat)
+                B_cat_rnd = B_cat + sigma_SAFETY_common * draw_cat
                 safety_random_params[cat] = B_cat_rnd
         
         # 4. Define fixed parameters for segmentation features
@@ -479,7 +480,7 @@ class SafetyDemographicsInteractionModel:
         print("\nGenerating results table...")
         train_res, obs_per_ind = self.results
         
-        train_metrics = extract_mxl_metrics(train_res, obs_per_ind, train_res.data.numberOfObservations)
+        train_metrics = extract_mxl_metrics(train_res.data, obs_per_ind, train_res.data.numberOfObservations)
         params = train_res.get_estimated_parameters()
         all_param_names = sorted(list(params.index))
 

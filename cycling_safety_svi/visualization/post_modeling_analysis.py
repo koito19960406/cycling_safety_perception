@@ -148,6 +148,7 @@ class PostModelingAnalyzer:
         self.design_file_path = 'data/raw/main_design.csv'
         self.safety_scores_path = 'data/processed/predicted_danish/cycling_safety_scores.csv'
         self.pixel_ratios_path = 'data/processed/segmentation_results/pixel_ratios.csv'
+        self.model4_utilities_path = 'data/processed/model_results/image_utilities_model4.csv'
         self.scaled_images_dir = '/srv/shared/bicycle_project_roos/images_scaled/'
         self.gradcam_overlays_dir = Path('data/processed/gradcam_visualizations/overlays/')
         
@@ -229,6 +230,16 @@ class PostModelingAnalyzer:
         except FileNotFoundError:
             print(f"Warning: Pixel ratios file not found: {self.pixel_ratios_path}")
             self.pixel_ratios = None
+        
+        # Load Model 4 utilities
+        try:
+            self.model4_utilities = pd.read_csv(self.model4_utilities_path)
+            self.model4_utilities['image_name'] = self.model4_utilities['image_name'].str.strip()
+            print(f"✓ Loaded Model 4 utilities for {len(self.model4_utilities)} images")
+        except FileNotFoundError:
+            print(f"Warning: Model 4 utilities file not found: {self.model4_utilities_path}")
+            print("  Run cycling_safety_svi/modeling/compute_model4_utilities.py to generate it.")
+            self.model4_utilities = None
     
     def get_unique_image_utilities(self):
         """Get utility values for each unique image with percentile conversion"""
@@ -764,28 +775,38 @@ class PostModelingAnalyzer:
             print("Warning: Cannot create Figure 6 - missing safety scores or pixel ratios")
             return None
         
-        # Merge data for unique images
-        unique_utilities = self.get_unique_image_utilities()
-        
-        # Ensure string types for merging
-        unique_utilities['image_name'] = unique_utilities['image_name'].astype(str)
+        # Start with safety scores as base
         safety_scores_copy = self.safety_scores.copy()
         safety_scores_copy['image_name'] = safety_scores_copy['image_name'].astype(str)
-        pixel_ratios_copy = self.pixel_ratios.copy()
-        pixel_ratios_copy['filename_key'] = pixel_ratios_copy['filename_key'].astype(str)
         
-        # Merge with safety scores
-        merged_data = unique_utilities.merge(safety_scores_copy, on='image_name', how='inner')
+        # Merge with Model 4 utilities if available, otherwise use old utilities
+        if self.model4_utilities is not None:
+            model4_utilities_copy = self.model4_utilities.copy()
+            model4_utilities_copy['image_name'] = model4_utilities_copy['image_name'].astype(str)
+            merged_data = safety_scores_copy.merge(model4_utilities_copy[['image_name', 'utility_model4']], 
+                                                   on='image_name', how='inner')
+            utility_var = 'utility_model4'
+            print("Using Model 4 utilities for scatter plot")
+        else:
+            # Fallback to old method
+            unique_utilities = self.get_unique_image_utilities()
+            unique_utilities['image_name'] = unique_utilities['image_name'].astype(str)
+            merged_data = safety_scores_copy.merge(unique_utilities[['image_name', 'utility_stepwise_best']], 
+                                                   on='image_name', how='inner')
+            utility_var = 'utility_stepwise_best'
+            print("Using stepwise_best utilities for scatter plot (Model 4 utilities not available)")
         
         # Merge with pixel ratios
+        pixel_ratios_copy = self.pixel_ratios.copy()
+        pixel_ratios_copy['filename_key'] = pixel_ratios_copy['filename_key'].astype(str)
         merged_data = merged_data.merge(pixel_ratios_copy, left_on='image_name', right_on='filename_key', how='inner')
         
         if len(merged_data) == 0:
             print("Warning: No matching data found for scatter plots")
             return None
         
-        # Select variables for scatter plots (excluding utility_stepwise_wo_safety)
-        variables = ['safety_score', 'utility_stepwise_best', 'Car', 'Terrain', 'Bike Lane', 'Road', 'Vegetation']
+        # Select variables for scatter plots (using Model 4 utilities if available)
+        variables = ['safety_score', utility_var, 'Car', 'Terrain', 'Bike Lane', 'Road', 'Vegetation']
         
         # Filter variables that exist in the data
         available_vars = [var for var in variables if var in merged_data.columns]
@@ -807,7 +828,9 @@ class PostModelingAnalyzer:
         # Create scatter plot matrix
         n_vars = len(available_vars)
         fig, axes = plt.subplots(n_vars, n_vars, figsize=(20, 20))
-        fig.suptitle('Scatter Plot Matrix: Safety Scores, Utilities, and Segmentation Features', fontsize=24, fontweight='bold', y=0.98)
+        title_suffix = '(Model 4)' if utility_var == 'utility_model4' else '(Stepwise Best)'
+        fig.suptitle(f'Scatter Plot Matrix: Safety Scores, Utilities {title_suffix}, and Segmentation Features', 
+                     fontsize=24, fontweight='bold', y=0.98)
         
         for i, var1 in enumerate(available_vars):
             for j, var2 in enumerate(available_vars):
@@ -993,20 +1016,27 @@ class PostModelingAnalyzer:
             print("Warning: Cannot create Figure 9 - missing safety scores or pixel ratios")
             return None
 
-        # Merge data for unique images
-        unique_utilities = self.get_unique_image_utilities()
-
-        # Ensure string types for merging
-        unique_utilities['image_name'] = unique_utilities['image_name'].astype(str)
+        # Start with safety scores
         safety_scores_copy = self.safety_scores.copy()
         safety_scores_copy['image_name'] = safety_scores_copy['image_name'].astype(str)
-        pixel_ratios_copy = self.pixel_ratios.copy()
-        pixel_ratios_copy['filename_key'] = pixel_ratios_copy['filename_key'].astype(str)
-
-        # Merge with safety scores
-        merged_data = unique_utilities.merge(safety_scores_copy, on='image_name', how='inner')
+        
+        # Merge with Model 4 utilities if available, otherwise use old utilities
+        if self.model4_utilities is not None:
+            model4_utilities_copy = self.model4_utilities.copy()
+            model4_utilities_copy['image_name'] = model4_utilities_copy['image_name'].astype(str)
+            merged_data = safety_scores_copy.merge(model4_utilities_copy[['image_name', 'utility_model4']], 
+                                                   on='image_name', how='inner')
+            utility_col = 'utility_model4'
+        else:
+            unique_utilities = self.get_unique_image_utilities()
+            unique_utilities['image_name'] = unique_utilities['image_name'].astype(str)
+            merged_data = safety_scores_copy.merge(unique_utilities[['image_name', 'utility_stepwise_best']], 
+                                                   on='image_name', how='inner')
+            utility_col = 'utility_stepwise_best'
 
         # Merge with pixel ratios
+        pixel_ratios_copy = self.pixel_ratios.copy()
+        pixel_ratios_copy['filename_key'] = pixel_ratios_copy['filename_key'].astype(str)
         merged_data = merged_data.merge(pixel_ratios_copy, left_on='image_name', right_on='filename_key', how='inner')
 
         if len(merged_data) == 0 or 'Vegetation' not in merged_data.columns:
@@ -1015,7 +1045,7 @@ class PostModelingAnalyzer:
 
         # Select variables for the plot
         x = merged_data['safety_score']
-        y = merged_data['utility_stepwise_best']
+        y = merged_data[utility_col]
         z = merged_data['Vegetation']
         
         # Create figure
@@ -1053,23 +1083,30 @@ class PostModelingAnalyzer:
             print("Warning: Cannot create Figure 10 - missing safety scores or pixel ratios")
             return None
 
-        # Merge data for unique images
-        unique_utilities = self.get_unique_image_utilities()
-
-        # Ensure string types for merging
-        unique_utilities['image_name'] = unique_utilities['image_name'].astype(str)
+        # Start with safety scores
         safety_scores_copy = self.safety_scores.copy()
         safety_scores_copy['image_name'] = safety_scores_copy['image_name'].astype(str)
-        pixel_ratios_copy = self.pixel_ratios.copy()
-        pixel_ratios_copy['filename_key'] = pixel_ratios_copy['filename_key'].astype(str)
-
-        # Merge with safety scores
-        merged_data = unique_utilities.merge(safety_scores_copy, on='image_name', how='inner')
+        
+        # Merge with Model 4 utilities if available, otherwise use old utilities
+        if self.model4_utilities is not None:
+            model4_utilities_copy = self.model4_utilities.copy()
+            model4_utilities_copy['image_name'] = model4_utilities_copy['image_name'].astype(str)
+            merged_data = safety_scores_copy.merge(model4_utilities_copy[['image_name', 'utility_model4']], 
+                                                   on='image_name', how='inner')
+            utility_col = 'utility_model4'
+        else:
+            unique_utilities = self.get_unique_image_utilities()
+            unique_utilities['image_name'] = unique_utilities['image_name'].astype(str)
+            merged_data = safety_scores_copy.merge(unique_utilities[['image_name', 'utility_stepwise_best']], 
+                                                   on='image_name', how='inner')
+            utility_col = 'utility_stepwise_best'
 
         # Merge with pixel ratios
+        pixel_ratios_copy = self.pixel_ratios.copy()
+        pixel_ratios_copy['filename_key'] = pixel_ratios_copy['filename_key'].astype(str)
         merged_data = merged_data.merge(pixel_ratios_copy, left_on='image_name', right_on='filename_key', how='inner')
 
-        required_cols = ['Vegetation', 'Terrain', 'safety_score', 'utility_stepwise_best']
+        required_cols = ['Vegetation', 'Terrain', 'safety_score', utility_col]
         if not all(col in merged_data.columns for col in required_cols):
             print(f"Warning: Missing one or more required columns for Figure 10: {required_cols}")
             return None
@@ -1078,7 +1115,7 @@ class PostModelingAnalyzer:
         x = merged_data['Vegetation']
         y = merged_data['Terrain']
         z = merged_data['safety_score']
-        size = merged_data['utility_stepwise_best']
+        size = merged_data[utility_col]
         
         # Scale utility to be used as size (s must be non-negative)
         # We'll normalize it to a range, e.g., 10 to 500
