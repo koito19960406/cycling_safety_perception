@@ -15,21 +15,14 @@ Usage:
     python safety_demographics_interaction_model_method1.py --model_path /path/to/final_model.pickle
 """
 
-import os
-import argparse
 import pandas as pd
-import numpy as np
 import pickle
 import sqlite3
-import biogeme.database as db
-import biogeme.biogeme as bio
-import biogeme.models as models
-import biogeme.results as res
 import logging
 from biogeme.expressions import Beta, Variable, log, exp, bioDraws
 from pathlib import Path
 from datetime import datetime
-import json
+import argparse
 from mxl_functions import (
     estimate_mxl, prepare_panel_data, apply_data_cleaning,
     extract_mxl_metrics, print_mxl_results
@@ -54,72 +47,50 @@ class SafetyDemographicsInteractionModel:
         
         logging.getLogger('biogeme').setLevel(logging.WARNING)
         
-        # Mappings with sanitized labels for biogeme compatibility
+        # Raw-to-merged category mappings (merge categories to max 3)
+        # Strategy: 
+        # - Nominal variables: create "Others" category as reference (code 0)
+        # - Ordinal variables: merge small categories into nearest category
+        self.raw_to_merged = {
+            'age': {1: 1, 2: 2, 3: 2, 4: 3, 5: 3},  # Young, Middle, Senior
+            'gender': {1: 1, 2: 2, 3: 0},  # Male, Female, Others (ref)
+            'household_composition': {1: 1, 2: 2, 3: 2, 4: 0, 5: 0, 6: 0},  # Alone, Couple, Others (ref)
+            'household_size': {1: 1, 2: 1, 3: 2, 4: 2, 5: 3, 6: 3},  # Small, Medium, Large
+            'education': {2: 1, 3: 1, 4: 1, 5: 2, 6: 2, 7: 2, 8: 2, 9: 3, 10: 3, 11: 3, 12: 3, 13: 2, 14: 2},  # Low, Medium (includes unknown), High
+            'income': {1: 1, 2: 1, 3: 1, 4: 2, 5: 3, 6: 3, 7: 2, 8: 2},  # Low, Medium (includes unknown), High
+            'bills': {1: 1, 2: 1, 3: 2, 4: 3, 5: 3, 6: 2},  # Easy, Reasonable (includes unknown), Difficult
+            'transportation': {1: 1, 2: 2, 3: 3, 4: 4, 5: 0},  # Walk, Bike, Public, Car, Others (ref)
+            'car': {1: 1, 2: 2, 3: 3, 4: 3},  # No_car, One_car, Multiple_cars
+            'traveltime': {1: 1, 2: 2, 3: 2, 4: 3, 5: 3, 6: 3},  # No_commute, Short, Long
+            'commutingdays': {1: 1, 2: 2, 3: 2, 4: 2, 5: 3, 6: 3},  # No_commute, Part_time, Full_time
+            'cycler': {1: 1, 2: 2, 3: 2, 4: 2, 5: 3, 6: 3, 7: 3},  # Non_cyclist, Occasional, Regular
+            'cyclingincident': {1: 1, 2: 2, 3: 3},  # Severe, Mild, No
+            'cyclinglike': {1: 1, 2: 2},  # Yes, No
+            'cyclingunsafe': {1: 1, 2: 2, 3: 3},  # Sometimes, Evening_night, No
+            'biketype': {1: 1, 2: 2, 3: 3, 4: 0, 5: 0},  # Regular, Racing, E_bike, Others (ref)
+            'trippurpose': {1: 1, 2: 2, 3: 3, 4: 0}  # Commuting, Errands, Recreational, Others (ref)
+        }
+        
+        # Mappings with sanitized labels for biogeme compatibility (merged categories)
+        # Note: Code 0 = "Others" used as reference for nominal variables
         self.demographic_mappings = {
-            'age': {
-                1: 'age_18_30', 2: 'age_31_45', 3: 'age_46_60', 
-                4: 'age_61_75', 5: 'age_76_plus'
-            },
-            'gender': {
-                1: 'Male', 2: 'Female', 3: 'Other', 4: 'Prefer_not_to_say'
-            },
-            'household_composition': {
-                1: 'Live_alone', 2: 'Couple_no_children', 3: 'Couple_with_children',
-                4: 'One_adult_with_children', 5: 'Two_plus_adults_not_couple', 6: 'Other_hh'
-            },
-            'household_size': {
-                1: 'hh_1', 2: 'hh_2', 3: 'hh_3', 
-                4: 'hh_4', 5: 'hh_5', 6: 'hh_6_plus'
-            },
-            'education': {
-                1: 'No_education', 2: 'Primary_education', 3: 'Lower_vocational',
-                4: 'Lower_secondary', 5: 'Intermediate_vocational', 6: 'MULO_or_MMS',
-                7: 'HAVO', 8: 'HBS_VWO_etc', 9: 'HBO',
-                10: 'University', 11: 'MSc', 12: 'PhD',
-                13: 'Other_edu', 14: 'Prefer_not_to_say_edu'
-            },
-            'income': {
-                1: 'inc_lt_1250', 2: 'inc_1251_1700', 3: 'inc_1701_2250',
-                4: 'inc_2251_3650', 5: 'inc_3651_7000', 6: 'inc_gt_7001',
-                7: 'Unknown_inc', 8: 'Prefer_not_to_say_inc'
-            },
-            'bills': {
-                1: 'bills_very_easy', 2: 'bills_easy', 3: 'bills_reasonable', 
-                4: 'bills_difficult', 5: 'bills_very_difficult', 6: 'Unknown_bills'
-            },
-            'transportation': {
-                1: 'Walk', 2: 'Bike', 3: 'Public_transport', 4: 'Car_transport', 5: 'Other_transport'
-            },
-            'car': {
-                1: 'No_cars', 2: 'car_1', 3: 'car_2', 4: 'car_3_plus'
-            },
-            'traveltime': {
-                1: 'No_commute', 2: 'tt_lt_10_min', 3: 'tt_10_20_min',
-                4: 'tt_20_30_min', 5: 'tt_30_40_min'
-            },
-            'commutingdays': {
-                1: 'cd_no_commute', 2: 'cd_1_day_week', 3: 'cd_2_days_week',
-                4: 'cd_3_days_week', 5: 'cd_4_days_week', 6: 'cd_5_plus_days_week'
-            },
-            'cycler': {
-                1: 'Do_not_cycle', 2: 'cycle_lt_1_week', 3: 'cycle_1_day_week',
-                4: 'cycle_2_days_week', 5: 'cycle_3_days_week', 6: 'cycle_4_days_week',
-                7: 'cycle_5_plus_days_week'
-            },
-            'cyclingincident': {
-                1: 'incid_yes_severe', 2: 'incid_yes_mild', 3: 'incid_no'
-            },
-            'cyclinglike': {1: 'like_yes', 2: 'like_no'},
-            'cyclingunsafe': {
-                1: 'unsafe_yes_sometimes', 2: 'unsafe_yes_evening_night', 3: 'unsafe_no'
-            },
-            'biketype': {
-                1: 'Regular_bike', 2: 'Racing_bike', 3: 'E_bike', 
-                4: 'Fatbike', 5: 'Other_bike'
-            },
-            'trippurpose': {
-                1: 'purpose_commuting', 2: 'purpose_errands', 3: 'purpose_recreational', 4: 'purpose_other'
-            }
+            'age': {1: 'Young', 2: 'Middle', 3: 'Senior'},
+            'gender': {0: 'Others', 1: 'Male', 2: 'Female'},
+            'household_composition': {0: 'Others', 1: 'Alone', 2: 'Couple'},
+            'household_size': {1: 'Small', 2: 'Medium', 3: 'Large'},
+            'education': {1: 'Low', 2: 'Medium', 3: 'High'},
+            'income': {1: 'Low', 2: 'Medium', 3: 'High'},
+            'bills': {1: 'Easy', 2: 'Reasonable', 3: 'Difficult'},
+            'transportation': {0: 'Others', 1: 'Walk', 2: 'Bike', 3: 'Public', 4: 'Car'},
+            'car': {1: 'No_car', 2: 'One_car', 3: 'Multiple_cars'},
+            'traveltime': {1: 'No_commute', 2: 'Short', 3: 'Long'},
+            'commutingdays': {1: 'No_commute', 2: 'Part_time', 3: 'Full_time'},
+            'cycler': {1: 'Non_cyclist', 2: 'Occasional', 3: 'Regular'},
+            'cyclingincident': {1: 'Severe', 2: 'Mild', 3: 'No'},
+            'cyclinglike': {1: 'Yes', 2: 'No'},
+            'cyclingunsafe': {1: 'Sometimes', 2: 'Evening_night', 3: 'No'},
+            'biketype': {0: 'Others', 1: 'Regular', 2: 'Racing', 3: 'E_bike'},
+            'trippurpose': {0: 'Others', 1: 'Commuting', 2: 'Errands', 3: 'Recreational'}
         }
         
         self.feature_name_mapping = {
@@ -189,6 +160,7 @@ class SafetyDemographicsInteractionModel:
             print("No segmentation features in base model, skipping segmentation data.")
 
         self._merge_all_datasets()
+        self._merge_demographic_categories()
         self._process_demographics()
         # save self.merged_data in a csv file
         merged_path = self.output_dir.parent / f'merged_data_{self.model_group}.csv'
@@ -253,16 +225,26 @@ class SafetyDemographicsInteractionModel:
                 merged_data[f"{feature_col}_2"] = merged_data['IMG2'].map(lambda x: segmentation_dict.get(x, {}).get(feature_col, 0))
         
         self.merged_data = merged_data
+    
+    def _merge_demographic_categories(self):
+        """Apply category merging to reduce categories to max 3."""
+        print("\nApplying demographic category merging...")
+        for col, merge_map in self.raw_to_merged.items():
+            if col in self.merged_data.columns:
+                # Apply merging transformation
+                self.merged_data[col] = self.merged_data[col].map(merge_map)
+                # Count observations in "Others" category (code 0)
+                others_count = (self.merged_data[col] == 0).sum()
+                if others_count > 0:
+                    print(f"  {col}: {others_count} observations merged into 'Others' (reference)")
+        
+        print(f"Total observations retained: {len(self.merged_data)} (no exclusions)")
         
     def _process_demographics(self):
         """Create categorical columns from numeric codes."""
         for col, mapping in self.demographic_mappings.items():
-            if mapping:
+            if mapping and col in self.merged_data.columns:
                 self.merged_data[f'{col}_cat'] = self.merged_data[col].map(mapping)
-        
-        self.merged_data = self.merged_data[
-            (self.merged_data['age_cat'] != 'other') & (self.merged_data['gender_cat'] != 'other')
-        ].copy()
         
         # Drop rows with any remaining NaNs in demographic data that will be used for dummies
         demographic_cat_cols = [f'{col}_cat' for col in self.demographic_mappings.keys() if f'{col}_cat' in self.merged_data.columns]
@@ -533,10 +515,19 @@ class SafetyDemographicsInteractionModel:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Run Safety-Demographics Interaction Model (MXL Method 1)')
-    parser.add_argument('--model_path', type=str, 
-                        default='reports/models/mxl_choice_20250725_122947/final_full_model.pickle',
-                        help='Path to the trained base model pickle file')
+    parser = argparse.ArgumentParser(
+        description='Run Safety-Demographics Interaction Model (MXL Method 1)'
+    )
+    parser.add_argument(
+        '--model_path', type=str,
+        default='reports/models/mxl_choice_20250725_122947/final_full_model.pickle',
+        help='Path to the trained base model pickle file'
+    )
+    parser.add_argument(
+        '--checkpoint', type=str,
+        default='reports/models/interaction/safety_demographics_20251028_174315',
+        help='Checkpoint directory to resume from (skips completed models)'
+    )
     args = parser.parse_args()
 
     # Define model groups - one demographic variable per group
@@ -560,15 +551,38 @@ def main():
         "trip_commutingdays": ["commutingdays"]
     }
     
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    base_output_dir = Path('reports/models/interaction') / f"safety_demographics_{timestamp}"
+    # Use checkpoint path if provided, else create new timestamped directory
+    if args.checkpoint:
+        base_output_dir = Path(args.checkpoint)
+        print(f"\nUsing checkpoint directory: {base_output_dir}")
+    else:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        base_output_dir = (
+            Path('reports/models/interaction') /
+            f"safety_demographics_{timestamp}"
+        )
+        print(f"\nCreating new output directory: {base_output_dir}")
 
     for group_name, variables in model_groups.items():
+        # Check if model results already exist (checkpoint)
+        group_output_dir = base_output_dir / group_name
+        result_file = (
+            group_output_dir /
+            f'demographics_interaction_model_{group_name}.tex'
+        )
+
+        if result_file.exists():
+            print(f"\n{'='*80}")
+            print(
+                f"SKIPPING {group_name}: "
+                f"Results already exist at {result_file}"
+            )
+            print(f"{'='*80}")
+            continue
+        
         print(f"\n{'='*80}")
         print(f"Running analysis for group: {group_name}")
         print(f"{'='*80}")
-        
-        group_output_dir = base_output_dir / group_name
 
         interaction_model = SafetyDemographicsInteractionModel(
             model_path=args.model_path,

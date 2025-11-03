@@ -8,9 +8,8 @@ with panel data, adapted from the reference implementation for the cycling safet
 import biogeme.biogeme as bio
 import biogeme.database as db
 from biogeme import models
-from biogeme.expressions import (Beta, Variable, log, exp, PanelLikelihoodTrajectory, 
+from biogeme.expressions import (Beta, Variable, log, exp, 
                                  MonteCarlo, bioMultSum, bioDraws)
-import pandas as pd
 import numpy as np
 import os
 from pathlib import Path
@@ -252,7 +251,7 @@ def apply_data_cleaning(dataframe, individual_id='RID', min_obs=15, fix_problema
         mask = df_clean[individual_id] == 63
         last_15_idx = df_clean[mask].tail(15).index
         df_clean.loc[last_15_idx, individual_id] = 63999
-        print(f"Reassigned last 15 observations of RID 63 to RID 63999")
+        print("Reassigned last 15 observations of RID 63 to RID 63999")
     
     # Drop RIDs with less than minimum observations
     print(f'Dropping RIDs with less than {min_obs} observations...')
@@ -280,17 +279,23 @@ def extract_mxl_metrics(results, obs_per_ind, n_individuals):
     Returns:
         Dictionary with model metrics
     """
+    # Handle different result object structures
+    if hasattr(results, 'data'):
+        data = results.data
+    else:
+        data = results
+    
     # Calculate basic metrics
-    log_like = results.logLike
-    n_params = len(results.betaValues)
+    log_like = data.logLike
+    n_params = len(data.betaValues)
     n_obs = n_individuals * obs_per_ind
     
     # Calculate AIC and BIC
     aic = 2 * n_params - 2 * log_like
-    bic = np.log(n_individuals) * n_params - 2 * log_like  # Use n_individuals for panel data
+    bic = np.log(n_individuals) * n_params - 2 * log_like
     
     # Get pseudo R-squared
-    pseudo_r2 = results.rhoSquare
+    pseudo_r2 = data.rhoSquare
     
     return {
         'log_likelihood': log_like,
@@ -511,27 +516,86 @@ def estimate_wtp_mxl(V, AV, CHOICE, obs_per_ind, num_draws, biodata_wide, model_
     return results
 
 
+def simulate_mxl(V, AV, CHOICE, obs_per_ind, num_draws, biodata_wide, betas, model_name):
+    """
+    Simulate a panel mixed-logit model with fixed parameters and compute fit measures.
+    
+    Args:
+        V: List of dictionaries containing utility functions for each observation
+        AV: Dictionary containing availability indicators
+        CHOICE: String name of choice variable
+        obs_per_ind: Number of observations per individual
+        num_draws: Number of draws for simulation
+        biodata_wide: Biogeme database in wide format
+        betas: Dictionary of parameter estimates {param_name: value}
+        model_name: Name of the model for reporting
+        
+    Returns:
+        Dictionary with simulation results: LL, rho_square, Pchosen_seq
+    """
+    # The conditional probability of the chosen alternative is a logit
+    condProb = [models.loglogit(V[q], AV, Variable(f'{CHOICE}_{q}')) for q in range(obs_per_ind)] 
+
+    # Take the product of the conditional probabilities
+    condprobIndiv = exp(bioMultSum(condProb))   # exp to convert from logP to P again
+
+    # The unconditional probability is obtained by simulation
+    uncondProb = MonteCarlo(condprobIndiv)
+
+    # The Log-likelihood is the log of the unconditional probability
+    LL = log(uncondProb)
+
+    # Simulate the model on the test database with fixed parameters
+    simulated_loglike = LL.get_value_c(
+        database=biodata_wide,
+        betas=betas,
+        number_of_draws=num_draws,
+        aggregation=False,
+        prepare_ids=True,
+    )
+    LLsim = simulated_loglike.sum()
+
+    # Rho-square calculation
+    LLnull = biodata_wide.get_sample_size() * obs_per_ind * np.log(1 / len(V[0]))
+    rho_square = 1 - (LLsim / LLnull)
+
+    # Add the results to a dictionary
+    simresults = {
+        "Pchosen_seq": simulated_loglike, 
+        "LL": LLsim, 
+        "rho_square": rho_square,
+        "model_name": model_name
+    }
+    return simresults
+
+
 def print_mxl_results(results):
     """Print formatted results for MXL model"""
     print("\n" + "="*60)
     print("MIXED LOGIT MODEL ESTIMATION RESULTS")
     print("="*60)
     
+    # Handle different result object structures
+    if hasattr(results, 'data'):
+        data = results.data
+    else:
+        data = results
+    
     # Model fit statistics
-    print(f"Log-likelihood: {results.logLike:.6f}")
-    print(f"Rho-square: {results.rhoSquare:.6f}")
-    print(f"Number of estimated parameters: {len(results.betaValues)}")
-    print(f"Number of observations: {results.numberOfObservations}")
+    print(f"Log-likelihood: {data.logLike:.6f}")
+    print(f"Rho-square: {data.rhoSquare:.6f}")
+    print(f"Number of estimated parameters: {len(data.betaValues)}")
+    print(f"Number of observations: {data.numberOfObservations}")
     
     # Parameter estimates
     print("\nParameter Estimates:")
     print("-" * 60)
     
     try:
-        param_estimates = results.get_estimated_parameters()
+        param_estimates = data.get_estimated_parameters()
         print(param_estimates.to_string())
-    except:
+    except Exception:
         # Fallback if get_estimated_parameters() is not available
         print("Beta values:")
-        for param, value in zip(results.betaNames, results.betaValues):
+        for param, value in zip(data.betaNames, data.betaValues):
             print(f"  {param}: {value:.6f}")
