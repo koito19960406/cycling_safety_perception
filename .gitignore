@@ -209,3 +209,25 @@ cycling_safety_svi/modeling/perception_models/wandb/
 
 # Literature review artifacts
 cycling_safety_svi/reports/pdf_texts/
+cycling_safety_svi/reports/read_pdfs.py
+
+# Removed from replication pipeline (kept locally)
+cycling_safety_svi/dataset.py
+cycling_safety_svi/features.py
+cycling_safety_svi/plots.py
+cycling_safety_svi/exploration/
+cycling_safety_svi/modeling/perception_models/
+cycling_safety_svi/modeling/reference_code/
+cycling_safety_svi/modeling/golem_choice/
+cycling_safety_svi/modeling/correlation.py
+cycling_safety_svi/modeling/segmentation.py
+cycling_safety_svi/modeling/model_result_compilation.py
+cycling_safety_svi/modeling/interaction_snippet.py
+cycling_safety_svi/modeling/wtp_model_snippet.py
+cycling_safety_svi/modeling/code_snippets.zip
+cycling_safety_svi/modeling/safety_roadtype_interaction_model.py
+cycling_safety_svi/modeling/safety_landuse_interaction_model.py
+cycling_safety_svi/visualization/visualize_predicted_scores.py
+cycling_safety_svi/test_gradcam_setup.py
+cycling_safety_svi/run_gradcam.sh
+cycling_safety_svi/README_GradCAM.md
