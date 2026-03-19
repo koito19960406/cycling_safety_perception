@@ -197,3 +197,15 @@ wandb/
 # .xml files in any directory
 *.xml
 *.pdf
+
+# IDE and AI tool configs
+.vscode/
+.claude/
+.cursor/
+
+# Generated model outputs
+cycling_safety_svi/modeling/perception_models/output/
+cycling_safety_svi/modeling/perception_models/wandb/
+
+# Literature review artifacts
+cycling_safety_svi/reports/pdf_texts/

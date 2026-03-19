@@ -1,4 +1,0 @@
-PERCEPTION MODEL TRAINING STARTED at: 1517_14_05_2025
-Number of categories: 3 (using 3 (low, medium, high) classes)
-Using device: cuda
-Loading data from /data/raw/perceptionratings.csv
