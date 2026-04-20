@@ -228,42 +228,49 @@ def create_utility_functions(random_params, variables_dict, obs_per_ind, alterna
     return V
 
 
-def apply_data_cleaning(dataframe, individual_id='RID', min_obs=15, fix_problematic_rid=True):
+def apply_data_cleaning(dataframe, individual_id='RID', min_obs=15, drop_problematic_rid=True):
     """
     Apply data cleaning steps from reference implementation
-    
+
     Args:
         dataframe: Input dataframe
         individual_id: Column name for individual identifier
         min_obs: Minimum number of observations per individual
-        fix_problematic_rid: Whether to fix the problematic RID (63)
-        
+        drop_problematic_rid: Whether to drop the problematic rows from RID 63
+            (co-author flagged the last 15 rows as duplicated + stray SEQ row)
+
     Returns:
         Cleaned dataframe
     """
     df_clean = dataframe.copy()
-    
+
     print(f"Original data shape: {df_clean.shape}")
-    
-    # Fix problematic RID 63 if requested
-    if fix_problematic_rid and 63 in df_clean[individual_id].values:
-        print("Fixing problematic RID 63...")
+
+    # Drop the last 15 rows of RID 63 (duplicated rows + stray SEQ row, per co-author)
+    if drop_problematic_rid and 63 in df_clean[individual_id].values:
+        print("Dropping last 15 rows of RID 63 (duplicated + stray SEQ)...")
         mask = df_clean[individual_id] == 63
         last_15_idx = df_clean[mask].tail(15).index
-        df_clean.loc[last_15_idx, individual_id] = 63999
-        print("Reassigned last 15 observations of RID 63 to RID 63999")
-    
+        df_clean = df_clean.drop(index=last_15_idx)
+        print(f"Dropped {len(last_15_idx)} rows from RID 63")
+
     # Drop RIDs with less than minimum observations
     print(f'Dropping RIDs with less than {min_obs} observations...')
     rid_counts = df_clean[individual_id].value_counts()
     rids_to_drop = rid_counts[rid_counts < min_obs].index
-    
+
     print(f'Dropping {len(rids_to_drop)} RIDs with less than {min_obs} observations')
     df_clean = df_clean[~df_clean[individual_id].isin(rids_to_drop)]
-    
+
     print(f"Cleaned data shape: {df_clean.shape}")
     print(f"Unique RIDs: {df_clean[individual_id].nunique()}")
-    
+
+    if drop_problematic_rid:
+        assert df_clean.shape[0] == 11190, f"Expected 11190 rows, got {df_clean.shape[0]}"
+        assert df_clean[individual_id].nunique() == 746, (
+            f"Expected 746 individuals, got {df_clean[individual_id].nunique()}"
+        )
+
     return df_clean
 
 

@@ -70,7 +70,7 @@ class StepwiseTrainTestValidation:
             self.choice_data, 
             individual_id=self.individual_id,
             min_obs=self.min_obs_per_individual,
-            fix_problematic_rid=True
+            drop_problematic_rid=True
         )
         
         self.choice_data = self.choice_data.reset_index(drop=True)

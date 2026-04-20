@@ -142,7 +142,7 @@ class SafetyDemographicsInteractionModel:
             self.choice_data, 
             individual_id=self.individual_id,
             min_obs=self.min_obs_per_individual,
-            fix_problematic_rid=True
+            drop_problematic_rid=True
         )
 
         self._load_enhanced_demographics(database_path)
@@ -462,7 +462,9 @@ class SafetyDemographicsInteractionModel:
         print("\nGenerating results table...")
         train_res, obs_per_ind = self.results
         
-        train_metrics = extract_mxl_metrics(train_res.data, obs_per_ind, train_res.data.numberOfObservations)
+        # Get number of individuals (sample size) from the wide format data
+        n_individuals = train_res.data.get_sample_size()
+        train_metrics = extract_mxl_metrics(train_res.data, obs_per_ind, n_individuals)
         params = train_res.get_estimated_parameters()
         all_param_names = sorted(list(params.index))
 
@@ -478,7 +480,7 @@ class SafetyDemographicsInteractionModel:
             "\\begin{tabular}{lc}", "\\toprule",
             "& \\textbf{Coefficient (t-stat)} \\\\", "\\midrule",
             "\\multicolumn{2}{l}{\\textit{Goodness of fit}} \\\\", "\\hline",
-            f"Sample size & {train_metrics['n_observations']} \\\\",
+            f"Sample size & {train_metrics['n_individuals']} \\\\",
             f"Log-Likelihood & {train_metrics['log_likelihood']:.2f} \\\\",
             f"Rho-squared & {train_metrics['pseudo_r2']:.4f} \\\\",
             "\\hline", "\\multicolumn{2}{l}{\\textit{Parameters}} \\\\", "\\hline"
