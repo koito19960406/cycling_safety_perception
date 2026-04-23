@@ -246,27 +246,26 @@ class StepwiseTrainTestValidation:
         
     def split_train_test(self):
         """
-        Split data into train and test sets by individuals (RIDs)
-        Maintains panel structure by splitting at individual level
+        Split data using the pre-labeled ``train`` and ``test`` columns in
+        ``cv_dcm.csv``. Those labels are the canonical split used by the paper
+        and by the co-author (606 train / 140 test individuals).
         """
-        print("\nSplitting data into train/test sets...")
-        
-        unique_rids = self.merged_data[self.individual_id].unique()
-        n_rids = len(unique_rids)
-        n_train_rids = int(n_rids * self.train_ratio)
-        
-        np.random.seed(self.random_state)
-        shuffled_rids = np.random.permutation(unique_rids)
-        
-        train_rids = shuffled_rids[:n_train_rids]
-        test_rids = shuffled_rids[n_train_rids:]
-        
-        self.train_data = self.merged_data[self.merged_data[self.individual_id].isin(train_rids)].copy()
-        self.test_data = self.merged_data[self.merged_data[self.individual_id].isin(test_rids)].copy()
-        
+        print("\nSplitting data into train/test sets (using pre-labeled columns)...")
+
+        self.train_data = self.merged_data[self.merged_data['train'] == 1].copy()
+        self.test_data = self.merged_data[self.merged_data['test'] == 1].copy()
+
+        train_rids = self.train_data[self.individual_id].unique()
+        test_rids = self.test_data[self.individual_id].unique()
+        n_rids = len(self.merged_data[self.individual_id].unique())
+
         print(f"Train set: {len(self.train_data)} observations from {len(train_rids)} individuals")
         print(f"Test set: {len(self.test_data)} observations from {len(test_rids)} individuals")
         print(f"Train ratio: {len(train_rids)/n_rids:.2%}, Test ratio: {len(test_rids)/n_rids:.2%}")
+
+        assert len(train_rids) == 606, f"Expected 606 train individuals, got {len(train_rids)}"
+        assert len(test_rids) == 140, f"Expected 140 test individuals, got {len(test_rids)}"
+        assert set(train_rids).isdisjoint(set(test_rids)), "Train/test RID sets overlap"
         
     def _sanitize_name_for_beta(self, feature_name):
         """Creates a Biogeme-compatible name for a beta parameter."""
@@ -485,17 +484,13 @@ class StepwiseTrainTestValidation:
             V, obs_per_ind, train_results, f"{model_name}_test", features
         )
         
-        # Handle different result object structures for getting number of observations
-        if hasattr(train_results, 'data'):
-            n_train_obs = train_results.data.numberOfObservations
-        else:
-            n_train_obs = train_results.numberOfObservations
-        
-        n_train_individuals = n_train_obs // obs_per_ind
+        n_train_individuals = len(self.train_data[self.individual_id].unique())
+        n_train_obs = len(self.train_data)
         train_metrics = extract_mxl_metrics(
             train_results.data, obs_per_ind, n_train_individuals
         )
-        
+        train_metrics['n_observations'] = n_train_obs
+
         test_ll = test_results['LL']
         test_rho2 = test_results['rho_square']
         n_test_individuals = len(test_model_data[self.individual_id].unique())
@@ -539,42 +534,36 @@ class StepwiseTrainTestValidation:
             print("No models have been estimated. Cannot generate table.")
             return
 
+        results = next(iter(self.model_results.values()))
+        train_ll = results['train_metrics']['log_likelihood']
+        train_rho2 = results['train_metrics']['pseudo_r2']
+        train_n_obs = results['train_metrics']['n_observations']
+        train_n_ind = results['train_metrics']['n_individuals']
+
+        test_ll = results['test_ll']
+        test_rho2 = results['test_rho2']
+        test_n_obs = results['test_n_observations']
+        test_n_ind = results['test_n_individuals']
+
         lines = [
             "\\begin{table}[htbp]",
             "    \\centering",
             "    \\caption{Train vs Test Model Performance Comparison}",
             "    \\label{tab:train_test_comparison}",
-            "    \\resizebox{\\textwidth}{!}{%",
-            "    \\begin{tabular}{lcccccc}",
+            "    \\resizebox{0.6\\textwidth}{!}{%",
+            "    \\begin{tabular}{lcc}",
             "    \\toprule",
-            "    Model & \\multicolumn{3}{c}{Training} & \\multicolumn{3}{c}{Test} \\\\",
-            "    \\cmidrule(lr){2-4} \\cmidrule(lr){5-7}",
-            "    & LL & $\\rho^2$ & N & LL & $\\rho^2$ & N \\\\",
+            "    & Training & Test \\\\",
             "    \\midrule",
-        ]
-        
-        for model_name, results in self.model_results.items():
-            train_ll = results['train_metrics']['log_likelihood']
-            train_rho2 = results['train_metrics']['pseudo_r2']
-            train_n = results['train_metrics']['n_observations']
-            
-            test_ll = results['test_ll']
-            test_rho2 = results['test_rho2']
-            test_n = results['test_n_observations']
-            
-            n_features = len(results.get('features', []))
-            model_display = f"Stepwise Model ({n_features} features)"
-            lines.append(
-                f"    {model_display} & {train_ll:.2f} & {train_rho2:.4f} & {train_n} & "
-                f"{test_ll:.2f} & {test_rho2:.4f} & {test_n} \\\\"
-            )
-        
-        lines.extend([
+            f"    LL & {train_ll:.2f} & {test_ll:.2f} \\\\",
+            f"    $\\rho^2$ & {train_rho2:.4f} & {test_rho2:.4f} \\\\",
+            f"    Number of observations & {train_n_obs:,} & {test_n_obs:,} \\\\",
+            f"    Sample size & {train_n_ind} & {test_n_ind} \\\\",
             "    \\bottomrule",
             "    \\end{tabular}",
             "    }",
-            "\\end{table}"
-        ])
+            "\\end{table}",
+        ]
 
         latex_content = "\n".join(lines)
         table_path = self.output_dir / 'train_test_comparison.tex'

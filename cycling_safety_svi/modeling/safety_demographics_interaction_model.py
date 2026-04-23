@@ -462,8 +462,7 @@ class SafetyDemographicsInteractionModel:
         print("\nGenerating results table...")
         train_res, obs_per_ind = self.results
         
-        # Get number of individuals (sample size) from the wide format data
-        n_individuals = train_res.data.get_sample_size()
+        n_individuals = train_res.data.sampleSize
         train_metrics = extract_mxl_metrics(train_res.data, obs_per_ind, n_individuals)
         params = train_res.get_estimated_parameters()
         all_param_names = sorted(list(params.index))
