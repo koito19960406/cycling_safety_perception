@@ -67,7 +67,8 @@ def identify_reference_category(params):
 
 
 # Base directory
-base_dir = Path("/Users/koichiito/Documents/NUS PhD/Academic Matter/cycling_safety_perception/reports/models/interaction/safety_demographics_20251028_174315")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+base_dir = PROJECT_ROOT / "reports/models/interaction/safety_demographics_20260420_182818"
 
 # All interaction models
 models = {
@@ -77,7 +78,7 @@ models = {
     'Household Composition': 'demographic_household_composition/demographics_interaction_demographic_household_composition.tex',
     'Income': 'socioeconomic_income/demographics_interaction_socioeconomic_income.tex',
     'Education': 'socioeconomic_education/demographics_interaction_socioeconomic_education.tex',
-    'Bills': 'socioeconomic_bills_EXCLUDE/demographics_interaction_socioeconomic_bills.tex',
+    'Bills': 'socioeconomic_bills/demographics_interaction_socioeconomic_bills.tex',
     'Cycling Attitude': 'cycling_experience_cyclinglike/demographics_interaction_cycling_experience_cyclinglike.tex',
     'Cycling Incident': 'cycling_experience_cyclingincident/demographics_interaction_cycling_experience_cyclingincident.tex',
     'Cycling Unsafe': 'cycling_experience_cyclingunsafe/demographics_interaction_cycling_experience_cyclingunsafe.tex',
@@ -163,7 +164,7 @@ print("="*100 + "\n")
 
 # Save results to file for use in table generation
 import json
-output_file = Path("/Users/koichiito/Documents/NUS PhD/Academic Matter/cycling_safety_perception/cycling_safety_svi/modeling/all_interaction_params.json")
+output_file = PROJECT_ROOT / "cycling_safety_svi/modeling/all_interaction_params.json"
 with open(output_file, 'w') as f:
     json.dump(all_results, f, indent=2)
 

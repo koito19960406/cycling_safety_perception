@@ -10,28 +10,38 @@ import sqlite3
 import pandas as pd
 from pathlib import Path
 
+from cycling_safety_svi.modeling.mxl_functions import apply_data_cleaning
+
 PROJ_ROOT = Path(__file__).resolve().parents[2]
 DB_PATH = PROJ_ROOT / "data" / "raw" / "database_2024_10_07_135133.db"
-CHOICE_DATA_PATH = PROJ_ROOT / "data" / "processed" / "choice_data_with_demographics.csv"
+CV_DCM_PATH = PROJ_ROOT / "data" / "raw" / "cv_dcm.csv"
 OUTPUT_PATH = PROJ_ROOT / "reports" / "models" / "descriptive_statistics.tex"
 
 
-def get_analysis_respondent_ids():
-    """Get respondent IDs that appear in the analysis dataset."""
-    choice = pd.read_csv(CHOICE_DATA_PATH)
-    return choice["respondent_id"].unique()
+def get_analysis_set_ids():
+    """Return the set of RIDs that survive the modeling-side data cleaning.
+
+    The choice models join RID (cv_dcm.csv) to set_id (Response table) in
+    safety_demographics_interaction_model.py — so set_id is the demographic key.
+    """
+    cleaned = apply_data_cleaning(pd.read_csv(CV_DCM_PATH))
+    return set(int(r) for r in cleaned["RID"].unique())
 
 
-def load_demographics(valid_ids):
-    """Load demographics from SQLite, filtered to analysis respondents."""
+def load_demographics(valid_set_ids):
+    """Load demographics from SQLite, filtered to set_ids in the modeled sample."""
     conn = sqlite3.connect(str(DB_PATH))
     resp = pd.read_sql("SELECT * FROM Response", conn)
     conn.close()
 
-    resp = resp[resp["respondent_id"].isin(valid_ids)]
+    resp = resp[resp["set_id"].isin(valid_set_ids)]
     resp = resp.dropna(
         subset=["age", "gender", "household_size", "income", "transportation", "cycler"]
     )
+    # Match the dedup applied in the interaction-model loader: set_id 63 has two rows
+    # with the same RID; the second one is renumbered to 63999 there. Drop it here so
+    # each set_id maps to one demographic row.
+    resp = resp.drop_duplicates(subset=["set_id"], keep="first")
     return resp
 
 
@@ -142,10 +152,10 @@ def generate_latex(results, n):
 
 
 def main():
-    valid_ids = get_analysis_respondent_ids()
-    print(f"Respondents in analysis: {len(valid_ids)}")
+    valid_set_ids = get_analysis_set_ids()
+    print(f"Cleaned RIDs in modeling sample: {len(valid_set_ids)}")
 
-    resp = load_demographics(valid_ids)
+    resp = load_demographics(valid_set_ids)
     print(f"Matched with valid demographics: {len(resp)}")
 
     results, n = compute_distributions(resp)

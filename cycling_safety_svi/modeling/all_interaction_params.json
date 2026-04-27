@@ -1,0 +1,388 @@
+{
+  "Age": {
+    "reference": {
+      "name": "Young_base",
+      "beta": 0.0213,
+      "se": 0.078,
+      "t_stat": 0.274
+    },
+    "interactions": {
+      "Middle": {
+        "beta": 0.102,
+        "se": 0.0895,
+        "t_stat": 1.14,
+        "z_score": 0.6797552170049872
+      },
+      "Senior": {
+        "beta": 0.213,
+        "se": 0.0997,
+        "t_stat": 2.14,
+        "z_score": 1.5143819517701982
+      }
+    }
+  },
+  "Gender": {
+    "reference": {
+      "name": "Others_base",
+      "beta": 0.623,
+      "se": 1.1,
+      "t_stat": 0.569
+    },
+    "interactions": {
+      "Female": {
+        "beta": -0.508,
+        "se": 1.1,
+        "t_stat": -0.463,
+        "z_score": -0.7270343359290775
+      },
+      "Male": {
+        "beta": -0.467,
+        "se": 1.1,
+        "t_stat": -0.425,
+        "z_score": -0.7006785377212154
+      }
+    }
+  },
+  "Household Size": {
+    "reference": {
+      "name": "Small_base",
+      "beta": 0.199,
+      "se": 0.0471,
+      "t_stat": 4.23
+    },
+    "interactions": {
+      "Large": {
+        "beta": 0.062,
+        "se": 0.126,
+        "t_stat": 0.493,
+        "z_score": -1.0184702645691777
+      },
+      "Medium": {
+        "beta": -0.178,
+        "se": 0.0676,
+        "t_stat": -2.63,
+        "z_score": -4.575778518963226
+      }
+    }
+  },
+  "Household Composition": {
+    "reference": {
+      "name": "Others_base",
+      "beta": 0.0339,
+      "se": 0.104,
+      "t_stat": 0.325
+    },
+    "interactions": {
+      "Alone": {
+        "beta": 0.169,
+        "se": 0.121,
+        "t_stat": 1.4,
+        "z_score": 0.8467432392470056
+      },
+      "Couple": {
+        "beta": 0.101,
+        "se": 0.111,
+        "t_stat": 0.91,
+        "z_score": 0.44113244078743497
+      }
+    }
+  },
+  "Income": {
+    "reference": {
+      "name": "Low_base",
+      "beta": 0.166,
+      "se": 0.0767,
+      "t_stat": 2.16
+    },
+    "interactions": {
+      "High": {
+        "beta": -0.0898,
+        "se": 0.0888,
+        "t_stat": -1.01,
+        "z_score": -2.1800171331892315
+      },
+      "Medium": {
+        "beta": 0.0213,
+        "se": 0.0902,
+        "t_stat": 0.237,
+        "z_score": -1.2221122505254083
+      }
+    }
+  },
+  "Education": {
+    "reference": {
+      "name": "Low_base",
+      "beta": 0.176,
+      "se": 0.0966,
+      "t_stat": 1.82
+    },
+    "interactions": {
+      "High": {
+        "beta": -0.074,
+        "se": 0.106,
+        "t_stat": -0.695,
+        "z_score": -1.7432056394052333
+      },
+      "Medium": {
+        "beta": -0.0063,
+        "se": 0.106,
+        "t_stat": -0.0595,
+        "z_score": -1.271145552254296
+      }
+    }
+  },
+  "Bills": {
+    "reference": {
+      "name": "Easy_base",
+      "beta": 0.187,
+      "se": 0.0464,
+      "t_stat": 4.03
+    },
+    "interactions": {
+      "Difficult": {
+        "beta": -0.0937,
+        "se": 0.123,
+        "t_stat": -0.763,
+        "z_score": -2.1352361563604316
+      },
+      "Reasonable": {
+        "beta": -0.0967,
+        "se": 0.068,
+        "t_stat": -1.42,
+        "z_score": -3.446211081918103
+      }
+    }
+  },
+  "Cycling Attitude": {
+    "reference": {
+      "name": "Yes_base",
+      "beta": 0.185,
+      "se": 0.04,
+      "t_stat": 4.62
+    },
+    "interactions": {
+      "No": {
+        "beta": -0.268,
+        "se": 0.0912,
+        "t_stat": -2.94,
+        "z_score": -4.5488164318383655
+      }
+    }
+  },
+  "Cycling Incident": {
+    "reference": {
+      "name": "Severe_base",
+      "beta": 0.131,
+      "se": 0.131,
+      "t_stat": 1.0
+    },
+    "interactions": {
+      "Mild": {
+        "beta": -0.00536,
+        "se": 0.146,
+        "t_stat": -0.0367,
+        "z_score": -0.6951625872332883
+      },
+      "No": {
+        "beta": 0.00683,
+        "se": 0.135,
+        "t_stat": 0.0508,
+        "z_score": -0.6600866426021805
+      }
+    }
+  },
+  "Cycling Unsafe": {
+    "reference": {
+      "name": "Sometimes_base",
+      "beta": 0.116,
+      "se": 0.0717,
+      "t_stat": 1.61
+    },
+    "interactions": {
+      "Evening_night": {
+        "beta": -0.039,
+        "se": 0.089,
+        "t_stat": -0.438,
+        "z_score": -1.3562154487324751
+      },
+      "No": {
+        "beta": 0.095,
+        "se": 0.084,
+        "t_stat": 1.13,
+        "z_score": -0.1901493044773663
+      }
+    }
+  },
+  "Cycling Frequency": {
+    "reference": {
+      "name": "Occasional_base",
+      "beta": 0.155,
+      "se": 0.0559,
+      "t_stat": 2.77
+    },
+    "interactions": {
+      "Regular": {
+        "beta": -0.0266,
+        "se": 0.0671,
+        "t_stat": -0.397,
+        "z_score": -2.0793744698756815
+      }
+    }
+  },
+  "Bike Type": {
+    "reference": {
+      "name": "Others_base",
+      "beta": -0.265,
+      "se": 0.314,
+      "t_stat": -0.844
+    },
+    "interactions": {
+      "E_bike": {
+        "beta": 0.408,
+        "se": 0.317,
+        "t_stat": 1.29,
+        "z_score": 1.5083280045016485
+      },
+      "Racing": {
+        "beta": 0.262,
+        "se": 0.34,
+        "t_stat": 0.773,
+        "z_score": 1.1386885064351369
+      },
+      "Regular": {
+        "beta": 0.427,
+        "se": 0.316,
+        "t_stat": 1.35,
+        "z_score": 1.5533823076225415
+      }
+    }
+  },
+  "Car Ownership": {
+    "reference": {
+      "name": "No_car_base",
+      "beta": 0.236,
+      "se": 0.0886,
+      "t_stat": 2.66
+    },
+    "interactions": {
+      "Multiple_cars": {
+        "beta": -0.0596,
+        "se": 0.112,
+        "t_stat": -0.532,
+        "z_score": -2.069920416273498
+      },
+      "One_car": {
+        "beta": -0.126,
+        "se": 0.0955,
+        "t_stat": -1.32,
+        "z_score": -2.7788490893911812
+      }
+    }
+  },
+  "Transportation Mode": {
+    "reference": {
+      "name": "Others_base",
+      "beta": 0.237,
+      "se": 0.5,
+      "t_stat": 0.473
+    },
+    "interactions": {
+      "Bike": {
+        "beta": -0.124,
+        "se": 0.501,
+        "t_stat": -0.247,
+        "z_score": -0.5100208204406556
+      },
+      "Car": {
+        "beta": -0.103,
+        "se": 0.502,
+        "t_stat": -0.204,
+        "z_score": -0.47987190956052245
+      },
+      "Public": {
+        "beta": -0.0623,
+        "se": 0.522,
+        "t_stat": -0.119,
+        "z_score": -0.41406661789473503
+      },
+      "Walk": {
+        "beta": -0.0135,
+        "se": 0.508,
+        "t_stat": -0.0267,
+        "z_score": -0.35143783808866663
+      }
+    }
+  },
+  "Commuting Days": {
+    "reference": {
+      "name": "No_commute_base",
+      "beta": 0.203,
+      "se": 0.0597,
+      "t_stat": 3.4
+    },
+    "interactions": {
+      "Full_time": {
+        "beta": -0.023,
+        "se": 0.0751,
+        "t_stat": -0.306,
+        "z_score": -2.355688028568102
+      },
+      "Part_time": {
+        "beta": -0.176,
+        "se": 0.083,
+        "t_stat": -2.12,
+        "z_score": -3.7069511686845384
+      }
+    }
+  },
+  "Travel Time": {
+    "reference": {
+      "name": "No_commute_base",
+      "beta": 0.224,
+      "se": 0.0607,
+      "t_stat": 3.68
+    },
+    "interactions": {
+      "Long": {
+        "beta": -0.119,
+        "se": 0.0743,
+        "t_stat": -1.6,
+        "z_score": -3.5750547356483686
+      },
+      "Short": {
+        "beta": -0.11,
+        "se": 0.0853,
+        "t_stat": -1.29,
+        "z_score": -3.1902865921854073
+      }
+    }
+  },
+  "Trip Purpose": {
+    "reference": {
+      "name": "Others_base",
+      "beta": -0.162,
+      "se": 0.158,
+      "t_stat": -1.02
+    },
+    "interactions": {
+      "Commuting": {
+        "beta": 0.278,
+        "se": 0.167,
+        "t_stat": 1.66,
+        "z_score": 1.9138938847029616
+      },
+      "Errands": {
+        "beta": 0.246,
+        "se": 0.165,
+        "t_stat": 1.49,
+        "z_score": 1.785955672212803
+      },
+      "Recreational": {
+        "beta": 0.486,
+        "se": 0.17,
+        "t_stat": 2.87,
+        "z_score": 2.792066160964019
+      }
+    }
+  }
+}

@@ -43,40 +43,41 @@ def compute_lrt(ll_base, params_base, ll_interaction, params_interaction, alpha=
 
 
 # Model 4 (base model) statistics
-MODEL_4_LL = -6337.18
+# Extracted from reports/models/mxl_choice_20260420_151037/final_full_model.tex
+MODEL_4_LL = -6328.274
 MODEL_4_PARAMS = 17
 
 # All interaction models with their statistics
-# Extracted from .tex files in reports/models/interaction/safety_demographics_20251028_174315/
+# Extracted from .tex files in reports/models/interaction/safety_demographics_20260420_182818/
 interaction_models = {
     # Demographics
-    'Age': {'ll': -6334.11, 'params': 19},
-    'Gender': {'ll': -6336.711, 'params': 19},
-    'Household Size': {'ll': -6335.23, 'params': 19},
-    'Household Composition': {'ll': -6336.537, 'params': 19},
-    
+    'Age': {'ll': -6325.216, 'params': 19},
+    'Gender': {'ll': -6327.805, 'params': 19},
+    'Household Size': {'ll': -6326.261, 'params': 19},
+    'Household Composition': {'ll': -6327.575, 'params': 19},
+
     # Socioeconomic
-    'Income': {'ll': -6337.084, 'params': 19},
-    'Education': {'ll': -6337.044, 'params': 19},
-    'Bills': {'ll': -6336.974, 'params': 19},
-    
+    'Income': {'ll': -6328.220, 'params': 19},
+    'Education': {'ll': -6328.117, 'params': 19},
+    'Bills': {'ll': -6328.028, 'params': 19},
+
     # Cycling Experience
-    'Cycling Attitude (Like)': {'ll': -6333.81, 'params': 18},
-    'Cycling Incident': {'ll': -6336.882, 'params': 19},
-    'Cycling Unsafe Feeling': {'ll': -6335.841, 'params': 19},
-    
+    'Cycling Attitude (Like)': {'ll': -6324.921, 'params': 18},
+    'Cycling Incident': {'ll': -6327.972, 'params': 19},
+    'Cycling Unsafe Feeling': {'ll': -6326.877, 'params': 19},
+
     # Cycling Type
-    'Cycling Frequency': {'ll': -6336.864, 'params': 18},
-    'Bike Type': {'ll': -6334.933, 'params': 20},
-    
+    'Cycling Frequency': {'ll': -6327.942, 'params': 18},
+    'Bike Type': {'ll': -6326.026, 'params': 20},
+
     # Transportation
-    'Car Ownership': {'ll': -6337.114, 'params': 19},
-    'Transportation Mode': {'ll': -6336.576, 'params': 21},
-    
+    'Car Ownership': {'ll': -6328.211, 'params': 19},
+    'Transportation Mode': {'ll': -6327.596, 'params': 21},
+
     # Trip
-    'Commuting Days': {'ll': -6336.001, 'params': 19},
-    'Travel Time': {'ll': -6337.628, 'params': 19},
-    'Trip Purpose': {'ll': -6329.71, 'params': 20},
+    'Commuting Days': {'ll': -6327.243, 'params': 19},
+    'Travel Time': {'ll': -6328.670, 'params': 19},
+    'Trip Purpose': {'ll': -6320.773, 'params': 20},
 }
 
 print("="*90)
