@@ -231,3 +231,6 @@ cycling_safety_svi/visualization/visualize_predicted_scores.py
 cycling_safety_svi/test_gradcam_setup.py
 cycling_safety_svi/run_gradcam.sh
 cycling_safety_svi/README_GradCAM.md
+
+# Local-only tooling (latexdiff, etc.)
+.tools/
